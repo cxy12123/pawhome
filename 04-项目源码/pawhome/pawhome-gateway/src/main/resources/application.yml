@@ -1,0 +1,189 @@
+server:
+  port: 8080
+  compression:
+    enabled: true
+
+spring:
+  application:
+    name: pawhome-gateway
+
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+      database: 0
+      timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 16
+          max-idle: 8
+          min-idle: 2
+
+  cloud:
+    nacos:
+      discovery:
+        enabled: false   # registry -> Eureka, Nacos keeps config center only
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+        username: ${NACOS_USERNAME:nacos}
+        password: ${NACOS_PASSWORD:nacos}
+        namespace: ${NACOS_NAMESPACE:public}
+
+    gateway:
+      # 关闭按服务名自动映射，避免 /pawhome-xxx/** 这类无意义路径暴露
+      discovery:
+        locator:
+          enabled: false
+      # 全局跨域
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOriginPatterns: "*"
+            allowedMethods: "*"
+            allowedHeaders: "*"
+            allowCredentials: true
+            maxAge: 3600
+      default-filters:
+        # 去掉重复响应头，避免下游服务重复设置
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE
+
+      routes:
+        # ---------------- 认证服务 ----------------
+        - id: pawhome-auth
+          uri: lb://pawhome-auth
+          predicates:
+            - Path=/api/auth/**
+          filters:
+            - StripPrefix=1
+            # 登录接口限流：每秒 5 次，突发 10 次，防暴力破解
+            - name: RequestRateLimiter
+              args:
+                key-resolver: "#{@ipKeyResolver}"
+                redis-rate-limiter.replenishRate: 5
+                redis-rate-limiter.burstCapacity: 10
+                redis-rate-limiter.requestedTokens: 1
+
+        # ---------------- 动物档案服务 ----------------
+        - id: pawhome-animal
+          uri: lb://pawhome-animal
+          predicates:
+            - Path=/api/animal/**
+          filters:
+            - StripPrefix=1
+
+        # ---------------- 领养服务 ----------------
+        # 防刷单只针对「提交申请」这一个写接口：
+        # 查询列表、我的申请、审核、回访都是正常高频操作，加了限流反而会被误伤
+        - id: pawhome-adoption-apply
+          uri: lb://pawhome-adoption
+          order: -1
+          predicates:
+            - Path=/api/adoption/apply
+          filters:
+            - StripPrefix=1
+            - name: RequestRateLimiter
+              args:
+                key-resolver: "#{@userKeyResolver}"
+                redis-rate-limiter.replenishRate: 3
+                redis-rate-limiter.burstCapacity: 6
+                redis-rate-limiter.requestedTokens: 1
+
+        - id: pawhome-adoption
+          uri: lb://pawhome-adoption
+          predicates:
+            - Path=/api/adoption/**
+          filters:
+            - StripPrefix=1
+
+        # ---------------- 物资库存服务 ----------------
+        - id: pawhome-supply
+          uri: lb://pawhome-supply
+          predicates:
+            - Path=/api/supply/**
+          filters:
+            - StripPrefix=1
+
+        # ---------------- 捐赠服务 ----------------
+        - id: pawhome-donation
+          uri: lb://pawhome-donation
+          predicates:
+            - Path=/api/donation/**
+          filters:
+            - StripPrefix=1
+
+        # ---------------- 志愿服务 ----------------
+        - id: pawhome-volunteer
+          uri: lb://pawhome-volunteer
+          predicates:
+            - Path=/api/volunteer/**
+          filters:
+            - StripPrefix=1
+
+        # ---------------- 通知服务 ----------------
+        - id: pawhome-notify
+          uri: lb://pawhome-notify
+          predicates:
+            - Path=/api/notify/**
+          filters:
+            - StripPrefix=1
+
+  # 静态前端页面放在 classpath:/static 下，无需额外部署 Nginx
+  web:
+    resources:
+      static-locations: classpath:/static/
+
+pawhome:
+  gateway:
+    auth:
+      enabled: true
+      # 必须与 auth 服务的 pawhome.jwt.secret 完全一致，否则验签必然失败
+      secret: ${JWT_SECRET:pawhome-secret-key-2026-must-be-at-least-32-bytes-long}
+      white-list:
+        - /api/auth/login
+        - /api/auth/register
+        - /api/auth/captcha
+        - /api/animal/public/**
+        # 上传的封面图要给 <img> 直接引用，浏览器发图片请求不会带 token，必须放行
+        - /api/animal/uploads/**
+        - /doc.html
+        - /webjars/**
+        - /v3/api-docs/**
+        - /swagger-ui/**
+        - /actuator/**
+        - /favicon.ico
+        - /
+        - /index.html
+        - /admin.html
+        - /css/**
+        - /js/**
+        - /images/**
+        # 前端离线依赖（Vue3 / Element Plus / axios）放在 static/lib 下，
+        # 不放行会导致首屏 401、页面白屏
+        - /lib/**
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway,routes
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    org.springframework.cloud.gateway: INFO
+    com.pawhome: DEBUG
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %clr(%5p) %clr([%X{traceId:-no-trace}]){magenta} %clr(%-40.40logger{39}){cyan} : %m%n"
+
+# ---------- Eureka client (textbook 11.4.2 / 11.5.3) ----------
+# Gateway only pulls the registry (register=false); lb:// routes resolve against Eureka.
+eureka:
+  client:
+    service-url:
+      defaultZone: http://${EUREKA_HOST:localhost}:${EUREKA_PORT:8761}/eureka/
+    register-with-eureka: false
+    fetch-registry: true
+    registry-fetch-interval-seconds: 5
+  instance:
+    prefer-ip-address: true

@@ -1,0 +1,1225 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PawHome · 流浪动物领养平台</title>
+    <link rel="stylesheet" href="/lib/element-plus.css">
+    <script src="/lib/vue.global.prod.js"></script>
+    <script src="/lib/element-plus.full.min.js"></script>
+    <script src="/lib/axios.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --brand: #e8734a; --brand-dark: #d05f38; --brand-soft: #fff2ec;
+            --ink: #23252b; --ink2: #5f646e; --ink3: #9aa0a8;
+            --line: #eee9e4; --bg: #fdfbf9; --green: #2f9e6e;
+        }
+        body {
+            font-family: "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
+            background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased;
+        }
+        [v-cloak] { display: none; }
+        img { display: block; }
+
+        /* ============ 顶部导航 ============ */
+        .nav {
+            position: sticky; top: 0; z-index: 50;
+            background: rgba(255,255,255,.93); backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--line);
+        }
+        .nav-inner { max-width: 1180px; margin: 0 auto; padding: 0 24px; height: 66px; display: flex; align-items: center; gap: 26px; }
+        .logo { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 700; letter-spacing: -.3px; }
+        .logo .mark { width: 34px; height: 34px; border-radius: 11px; background: linear-gradient(135deg, #f4a077, #e8734a); display: grid; place-items: center; font-size: 17px; }
+        .nav-links { display: flex; gap: 24px; font-size: 14px; color: var(--ink2); }
+        .nav-links a { cursor: pointer; padding: 6px 0; border-bottom: 2px solid transparent; transition: color .15s; }
+        .nav-links a:hover { color: var(--brand); }
+        .nav-links a.on { color: var(--brand); border-color: var(--brand); font-weight: 600; }
+        .spacer { flex: 1; }
+        .nav-user { display: flex; align-items: center; gap: 10px; font-size: 13.5px; color: var(--ink2); }
+        .avatar { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg,#f4a077,#e8734a); color: #fff; display: grid; place-items: center; font-size: 12.5px; font-weight: 600; }
+
+        .btn {
+            border: 0; border-radius: 10px; padding: 10px 18px; font-size: 13.5px;
+            font-family: inherit; cursor: pointer; background: var(--brand); color: #fff; font-weight: 600;
+            transition: background .15s;
+        }
+        .btn:hover { background: var(--brand-dark); }
+        .btn.ghost { background: #fff; border: 1px solid var(--line); color: var(--ink2); font-weight: 500; }
+        .btn.ghost:hover { border-color: var(--brand); color: var(--brand); }
+        .btn.block { display: block; width: 100%; }
+
+        /* ============ Hero ============ */
+        .hero { position: relative; overflow: hidden; background: linear-gradient(135deg,#fff5ef 0%,#fdece2 55%,#f8e2d3 100%); padding: 58px 24px 50px; }
+        .hero::after {
+            content: ""; position: absolute; right: -70px; top: -80px;
+            width: 360px; height: 360px; border-radius: 50%;
+            background: radial-gradient(circle, #ffd8c2, transparent 70%);
+        }
+        .hero-inner { max-width: 1180px; margin: 0 auto; position: relative; z-index: 2; }
+        .hero .kicker { display: inline-block; font-size: 12.5px; color: var(--brand); background: rgba(255,255,255,.75); border: 1px solid #f6d9c9; padding: 5px 12px; border-radius: 20px; margin-bottom: 18px; }
+        .hero h1 { font-size: 38px; line-height: 1.28; letter-spacing: -1px; margin-bottom: 14px; }
+        .hero h1 em { font-style: normal; color: var(--brand); }
+        .hero p { font-size: 15px; color: #7d6c62; max-width: 570px; line-height: 1.85; }
+        .hero-stats { display: flex; gap: 40px; margin-top: 30px; flex-wrap: wrap; }
+        .hero-stats b { display: block; font-size: 27px; color: var(--brand); letter-spacing: -.5px; }
+        .hero-stats span { font-size: 12.5px; color: #8d7a70; }
+
+        /* ============ 主体 ============ */
+        .wrap { max-width: 1180px; margin: 0 auto; padding: 34px 24px 64px; }
+        .filters { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; flex-wrap: wrap; }
+        .tabs { display: flex; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 4px; gap: 4px; }
+        .tabs button { border: 0; background: transparent; padding: 8px 18px; border-radius: 9px; font-size: 13.5px; color: var(--ink2); cursor: pointer; font-family: inherit; transition: all .15s; }
+        .tabs button.on { background: var(--brand); color: #fff; font-weight: 600; }
+        .search { width: 230px; }
+
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(266px, 1fr)); gap: 20px; }
+
+        .pet { background: #fff; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; cursor: pointer; display: flex; flex-direction: column; transition: transform .18s, box-shadow .18s; }
+        .pet:hover { transform: translateY(-4px); box-shadow: 0 16px 32px rgba(90,60,40,.1); }
+        .thumb { position: relative; aspect-ratio: 4 / 3; background: #f4f0ec; overflow: hidden; }
+        .thumb img { width: 100%; height: 100%; object-fit: cover; }
+        .badge { position: absolute; left: 12px; top: 12px; background: rgba(47,158,110,.94); color: #fff; font-size: 11.5px; padding: 3px 10px; border-radius: 8px; font-weight: 600; }
+        .badge.busy { background: rgba(224,158,54,.95); }
+        .pet-body { padding: 14px 16px 16px; display: flex; flex-direction: column; flex: 1; }
+        .pet-body h3 { font-size: 16px; margin-bottom: 5px; display: flex; align-items: baseline; gap: 7px; }
+        .pet-body h3 small { font-size: 11.5px; color: var(--ink3); font-weight: 400; }
+        .pet-meta { font-size: 12.5px; color: var(--ink3); margin-bottom: 11px; }
+        .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 15px; }
+        .chip { font-size: 11.5px; padding: 2px 8px; border-radius: 6px; background: #f6f2ee; color: var(--ink2); }
+        .chip.ok { background: #eaf6f0; color: var(--green); }
+        .pet-body .btn { margin-top: auto; }
+
+        .empty { text-align: center; padding: 80px 0; color: var(--ink3); font-size: 13.5px; }
+
+        /* ============ 详情 ============ */
+        .detail { display: grid; grid-template-columns: 1.02fr 1fr; gap: 0; }
+        .detail .pic { background: #f4f0ec; border-radius: 12px; overflow: hidden; }
+        .detail .pic img { width: 100%; height: 100%; max-height: 430px; object-fit: cover; }
+        .detail .info { padding-left: 26px; }
+        .detail h2 { font-size: 23px; margin-bottom: 6px; }
+        .detail .no { font-size: 12px; color: var(--ink3); font-family: ui-monospace, monospace; margin-bottom: 16px; }
+        .kv { display: grid; grid-template-columns: 1fr 1fr; gap: 11px 16px; margin-bottom: 16px; }
+        .kv div { font-size: 13px; color: var(--ink2); }
+        .kv span { color: var(--ink3); margin-right: 6px; }
+        .health-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+        .desc { font-size: 13px; color: var(--ink2); line-height: 1.9; background: #fbf8f5; border-radius: 10px; padding: 13px 15px; margin-bottom: 18px; }
+
+        /* 二选一用单选项，避免下拉弹层在对话框内被裁切 */
+        .radio-row { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; height: 32px; }
+        .radio-row label { display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; color: var(--ink2); cursor: pointer; white-space: nowrap; }
+        .radio-row input { width: 15px; height: 15px; accent-color: var(--brand); cursor: pointer; margin: 0; }
+
+        /* ============ 我的申请 ============ */
+        .apply-card { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 17px 19px; margin-bottom: 13px; display: flex; align-items: center; gap: 16px; }
+        .apply-card .no { font-size: 12px; color: var(--ink3); font-family: ui-monospace, monospace; }
+        .apply-card h4 { font-size: 14.5px; margin: 4px 0 5px; }
+        .apply-card .time { font-size: 12px; color: var(--ink3); }
+        .remark { font-size: 12.5px; color: var(--ink2); background: #fbf8f5; border-radius: 8px; padding: 9px 12px; margin-top: 10px; }
+
+        .foot { border-top: 1px solid var(--line); padding: 28px 24px; text-align: center; font-size: 12.5px; color: var(--ink3); line-height: 1.9; }
+
+        /* ============ 我的资料 / 爱心捐赠 ============ */
+        .panel { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 22px 24px; margin-bottom: 18px; }
+        .panel-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 16px; padding-bottom: 13px; border-bottom: 1px solid #f2eeea; }
+        .panel-head h3 { font-size: 16px; }
+        .panel-head .no { font-size: 12px; color: var(--ink3); font-family: ui-monospace, monospace; }
+        .panel-head .spacer { flex: 1; }
+        .panel-foot { display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; }
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+        .hint { font-size: 12.5px; color: var(--ink3); line-height: 1.7; }
+        .native-select { width: 100%; height: 34px; border: 1px solid var(--line); border-radius: 9px; padding: 0 10px; font-size: 13.5px; font-family: inherit; color: var(--ink); background: #fff; }
+        .native-select:focus { outline: none; border-color: var(--brand); }
+
+        .donate-row { display: flex; align-items: center; gap: 14px; padding: 14px 4px; border-bottom: 1px dashed #f0ece8; }
+        .donate-row:last-child { border-bottom: 0; }
+        .donate-row .d-main { flex: 1; }
+        .donate-row .d-no { font-size: 12px; color: var(--ink3); font-family: ui-monospace, monospace; }
+        .donate-row .d-desc { font-size: 13.5px; color: var(--ink); margin: 3px 0 2px; }
+        .donate-row .d-time { font-size: 12px; color: var(--ink3); }
+        .tag { font-size: 11.5px; padding: 3px 9px; border-radius: 7px; background: #f6f2ee; color: var(--ink2); white-space: nowrap; }
+        .tag.ok { background: #eaf6f0; color: #2f9e6e; }
+        .tag.wait { background: #fdf6e8; color: #b8860b; }
+        .tag.bad { background: #fdecea; color: #c0392b; }
+
+        /* ============ 消息中心 ============ */
+        .msg-item { display: flex; gap: 12px; align-items: flex-start; padding: 14px 2px; border-bottom: 1px dashed #f0ece8; }
+        .msg-item:last-child { border-bottom: 0; }
+        .msg-item .ico { width: 34px; height: 34px; border-radius: 10px; background: #fff2ec; display: grid; place-items: center; font-size: 16px; flex-shrink: 0; }
+        .msg-item .body { flex: 1; min-width: 0; }
+        .msg-item .t { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+        .msg-item .t .new { font-size: 10.5px; color: #fff; background: var(--brand); border-radius: 6px; padding: 1px 6px; font-weight: 500; }
+        .msg-item .c { font-size: 13px; color: var(--ink2); margin: 5px 0 4px; line-height: 1.75; }
+        .msg-item .d { font-size: 12px; color: var(--ink3); }
+        .badge-dot { background: var(--brand); color: #fff; font-size: 10.5px; border-radius: 9px; padding: 0 6px; margin-left: 5px; }
+
+        @media (max-width: 760px) {
+            .hero h1 { font-size: 27px; }
+            .nav-links { display: none; }
+            .detail { grid-template-columns: 1fr; }
+            .detail .info { padding: 20px 0 0; }
+            .kv { grid-template-columns: 1fr; }
+            .search { width: 100%; }
+            .apply-card { flex-direction: column; align-items: flex-start; }
+        }
+    </style>
+</head>
+<body>
+<div id="app" v-cloak>
+    <!-- ============ 导航 ============ -->
+    <header class="nav">
+        <div class="nav-inner">
+            <div class="logo"><span class="mark">🐾</span> PawHome</div>
+            <nav class="nav-links">
+                <a :class="{ on: view === 'home' }" @click="goHome">待领养</a>
+                <a :class="{ on: view === 'mine' }" @click="goMine">我的申请</a>
+                <a :class="{ on: view === 'donate' }" @click="goDonate">爱心捐赠</a>
+                <a :class="{ on: view === 'notify' }" @click="goNotify">
+                    消息<span class="badge-dot" v-if="unread">{{ unread }}</span>
+                </a>
+            </nav>
+            <div class="spacer"></div>
+            <template v-if="user">
+                <div class="nav-user" style="cursor:pointer" title="修改我的资料" @click="goProfile">
+                    <div class="avatar">{{ (user.realName || user.username).slice(0, 1) }}</div>
+                    <span>{{ user.realName || user.username }}</span>
+                </div>
+                <button v-if="user.role !== 'ADOPTER'" class="btn ghost" @click="toAdmin">管理后台</button>
+                <button class="btn ghost" @click="logout">退出</button>
+            </template>
+            <template v-else>
+                <button class="btn ghost" @click="openLogin(false)">登录</button>
+                <button class="btn" @click="openLogin(true)">注册领养账号</button>
+            </template>
+        </div>
+    </header>
+
+    <!-- ============ 首页 ============ -->
+    <div v-if="view === 'home'">
+        <section class="hero">
+            <div class="hero-inner">
+                <span class="kicker">城市流浪动物救助站 · 领养代替购买</span>
+                <h1>每一只流浪的它，<br>都在<em>等一个家</em></h1>
+                <p>它们被救助、被治疗、被照顾，现在只差最后一步——一个愿意长期陪伴的主人。浏览下面的档案，遇见属于你的那一只。</p>
+                <div class="hero-stats">
+                    <div><b>{{ pets.length }}</b><span>在站待领养</span></div>
+                    <div><b>{{ catCount }}</b><span>猫咪</span></div>
+                    <div><b>{{ dogCount }}</b><span>狗狗</span></div>
+                </div>
+            </div>
+        </section>
+
+        <div class="wrap">
+            <div class="filters">
+                <div class="tabs">
+                    <button :class="{ on: species === '' }" @click="species = ''">全部</button>
+                    <button :class="{ on: species === 'DOG' }" @click="species = 'DOG'">狗狗</button>
+                    <button :class="{ on: species === 'CAT' }" @click="species = 'CAT'">猫猫</button>
+                </div>
+                <el-input v-model="keyword" class="search" placeholder="搜索名字 / 品种" clearable />
+                <div class="spacer"></div>
+                <span style="font-size:12.5px;color:var(--ink3)">共 {{ filtered.length }} 只</span>
+            </div>
+
+            <div class="empty" v-if="loading">正在加载待领养动物…</div>
+            <div class="empty" v-else-if="!filtered.length">没有符合条件的动物，换个筛选试试</div>
+
+            <div class="grid" v-else>
+                <article class="pet" v-for="a in filtered" :key="a.id" @click="openDetail(a)">
+                    <div class="thumb">
+                        <img :src="a.coverImage" :alt="a.name" loading="lazy" @error="onImgError">
+                        <span class="badge" :class="{ busy: !canApply(a) }">
+                            {{ statusLabel(a) }}
+                        </span>
+                    </div>
+                    <div class="pet-body">
+                        <h3>{{ a.name }} <small>{{ a.breed }}</small></h3>
+                        <p class="pet-meta">{{ a.genderText }} · {{ a.ageText }} · {{ a.rescueCity || '本地' }}</p>
+                        <div class="chips">
+                            <span class="chip ok">{{ a.healthStatusText }}</span>
+                            <span class="chip" v-if="a.sterilized === 1">已绝育</span>
+                            <span class="chip" v-if="a.vaccinated === 1">已疫苗</span>
+                            <span class="chip" v-if="a.dewormed === 1">已驱虫</span>
+                        </div>
+                        <button class="btn block" @click.stop="goApply(a)" :disabled="!canApply(a)">
+                            {{ canApply(a) ? '申请领养' : statusLabel(a) }}
+                        </button>
+                    </div>
+                </article>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ 我的申请 ============ -->
+    <div class="wrap" v-else-if="view === 'mine'">
+        <h2 style="font-size:22px;margin-bottom:6px">我的领养申请</h2>
+        <p style="font-size:13px;color:var(--ink3);margin-bottom:22px">审核一般在 1-3 个工作日内完成，可在站内查看进度</p>
+
+        <div class="empty" v-if="mineLoading">正在加载申请记录…</div>
+        <div class="empty" v-else-if="user && user.role !== 'ADOPTER'">
+            当前登录的是「{{ roleText(user.role) }}」账号，名下没有领养申请<br>
+            <span style="display:inline-block;margin-top:10px">
+                换领养人账号查看，或
+                <a style="color:var(--brand);cursor:pointer" @click="toAdmin">去管理后台查看全部申请</a>
+            </span>
+        </div>
+        <div class="empty" v-else-if="mineError" style="color:#b3261e">{{ mineError }}</div>
+        <div class="empty" v-else-if="!user">登录后可查看申请进度，<a style="color:var(--brand);cursor:pointer" @click="openLogin(false)">立即登录</a></div>
+        <div class="empty" v-else-if="!myApplies.length">还没有提交过申请，<a style="color:var(--brand);cursor:pointer" @click="goHome">去看看待领养的它们</a></div>
+
+        <div v-else>
+            <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+                <button type="button" class="btn ghost" @click="loadMine">刷新列表</button>
+            </div>
+            <div class="apply-card" v-for="r in myApplies" :key="r.id">
+                <div style="flex:1">
+                    <div class="no">{{ r.applyNo }}</div>
+                    <h4>申请领养「{{ r.animalName }}」</h4>
+                    <div class="time">提交时间：{{ r.createTime }}</div>
+                    <div class="remark" v-if="r.auditRemark">审核意见：{{ r.auditRemark }}</div>
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:9px">
+                    <el-tag :type="statusType(r.status)" effect="light">{{ r.statusText || r.status }}</el-tag>
+                    <button v-if="r.status === 'PENDING'" type="button" class="btn ghost"
+                            style="padding:5px 13px;font-size:12.5px" @click="cancelApply(r)">取消申请</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ 爱心捐赠 ============ -->
+    <div class="wrap" v-else-if="view === 'donate'">
+        <h2 style="font-size:22px;margin-bottom:6px">爱心捐赠</h2>
+        <p style="font-size:13px;color:var(--ink3);margin-bottom:22px">
+            资金用于粮食、医疗与绝育，物资会直接进入救助站库存；提交后可在下方「我的捐赠」支付或取消
+        </p>
+
+        <div class="empty" v-if="!user">
+            登录后即可登记捐赠，
+            <a style="color:var(--brand);cursor:pointer" @click="openLogin(false)">立即登录</a>
+        </div>
+
+        <template v-else>
+            <div class="panel">
+                <div class="panel-head">
+                    <h3>登记一笔捐赠</h3>
+                    <span class="no">单号自动生成</span>
+                </div>
+                <el-form label-position="top" @submit.prevent>
+                    <el-form-item label="捐赠类型">
+                        <div class="radio-row">
+                            <label><input type="radio" value="MONEY" v-model="donateForm.type"> 资金捐赠</label>
+                            <label><input type="radio" value="GOODS" v-model="donateForm.type"> 物资捐赠</label>
+                        </div>
+                    </el-form-item>
+                    <div class="two-col">
+                        <el-form-item label="捐赠人">
+                            <el-input v-model="donateForm.donorName" placeholder="真实姓名或单位名称" />
+                        </el-form-item>
+                        <el-form-item label="联系电话">
+                            <el-input v-model="donateForm.donorPhone" placeholder="选填，便于开具回执" />
+                        </el-form-item>
+                    </div>
+                    <el-form-item v-if="donateForm.type === 'MONEY'" label="捐赠金额（元）">
+                        <el-input-number v-model="donateForm.amount" :min="1" :max="100000" :step="50" style="width:100%" />
+                    </el-form-item>
+                    <template v-else>
+                        <div class="two-col">
+                            <el-form-item label="捐赠物资">
+                                <select v-model="donateForm.supplyItemId" class="native-select">
+                                    <option :value="null" disabled>请选择要捐赠的物资</option>
+                                    <option v-for="x in supplyOptions" :key="x.id" :value="x.id">{{ x.name }}（{{ x.unit }}）</option>
+                                </select>
+                            </el-form-item>
+                            <el-form-item label="数量">
+                                <el-input-number v-model="donateForm.quantity" :min="1" :max="500" style="width:100%" />
+                            </el-form-item>
+                        </div>
+                        <el-form-item label="物资说明">
+                            <el-input v-model="donateForm.itemDesc" placeholder="如：幼猫粮 2kg" />
+                        </el-form-item>
+                    </template>
+                    <el-form-item label="留言">
+                        <el-input v-model="donateForm.remark" type="textarea" :rows="2"
+                                  placeholder="选填，比如希望用在哪个方面" />
+                    </el-form-item>
+                </el-form>
+                <div class="panel-foot">
+                    <button type="button" class="btn" :disabled="donating" @click="submitDonation">
+                        {{ donating ? '提交中…' : '提交捐赠单' }}
+                    </button>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-head">
+                    <h3>我的捐赠</h3>
+                    <div class="spacer"></div>
+                    <button type="button" class="btn ghost" style="padding:5px 13px;font-size:12.5px"
+                            @click="loadMyDonations">刷新</button>
+                </div>
+                <div class="empty" style="padding:40px 0" v-if="donateLoading">正在加载…</div>
+                <div class="empty" style="padding:40px 0" v-else-if="!myDonations.length">
+                    还没有捐赠记录，上面登记第一笔吧
+                </div>
+                <div v-else>
+                    <div class="donate-row" v-for="d in myDonations" :key="d.donationNo">
+                        <div class="d-main">
+                            <div class="d-no">{{ d.donationNo }}</div>
+                            <div class="d-desc">
+                                {{ d.type === 'MONEY'
+                                    ? '资金捐赠 ¥' + d.amount
+                                    : '物资捐赠 ' + (d.itemDesc || '物资') + ' × ' + d.quantity }}
+                            </div>
+                            <div class="d-time">{{ d.createTime }}</div>
+                        </div>
+                        <span class="tag" :class="donateTag(d.status)">{{ donationStatusText(d.status) }}</span>
+                        <template v-if="d.status === 'INIT'">
+                            <button type="button" class="btn" style="padding:6px 14px;font-size:12.5px"
+                                    @click="payDonation(d)">去支付</button>
+                            <button type="button" class="btn ghost" style="padding:6px 14px;font-size:12.5px"
+                                    @click="cancelDonation(d)">取消</button>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </template>
+    </div>
+
+    <!-- ============ 我的资料 ============ -->
+    <div class="wrap" v-else-if="view === 'profile'">
+        <h2 style="font-size:22px;margin-bottom:6px">我的资料</h2>
+        <p style="font-size:13px;color:var(--ink3);margin-bottom:22px">姓名和联系方式用于领养回访，请保持有效</p>
+
+        <div class="empty" v-if="!user">
+            登录后可查看和修改资料，
+            <a style="color:var(--brand);cursor:pointer" @click="openLogin(false)">立即登录</a>
+        </div>
+
+        <template v-else>
+            <div class="panel">
+                <div class="panel-head">
+                    <h3>基本信息</h3>
+                    <div class="spacer"></div>
+                    <span class="no">{{ user.username }} · {{ roleText(user.role) }}</span>
+                </div>
+                <el-form label-position="top" @submit.prevent>
+                    <div class="two-col">
+                        <el-form-item label="姓名">
+                            <el-input v-model="profileForm.realName" placeholder="真实姓名" />
+                        </el-form-item>
+                        <el-form-item label="手机号">
+                            <el-input v-model="profileForm.phone" placeholder="11 位手机号" />
+                        </el-form-item>
+                    </div>
+                    <el-form-item label="邮箱">
+                        <el-input v-model="profileForm.email" placeholder="选填" />
+                    </el-form-item>
+                    <div class="hint">账号与角色由管理员维护，如需变更请联系救助站工作人员。</div>
+                </el-form>
+                <div class="panel-foot">
+                    <button type="button" class="btn" :disabled="saving" @click="saveProfile">
+                        {{ saving ? '保存中…' : '保存修改' }}
+                    </button>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-head">
+                    <h3>修改密码</h3>
+                    <span class="no">改完需要用新密码重新登录</span>
+                </div>
+                <el-form label-position="top" @submit.prevent>
+                    <div class="two-col">
+                        <el-form-item label="原密码">
+                            <el-input v-model="pwdForm.oldPassword" type="password" show-password />
+                        </el-form-item>
+                        <el-form-item label="新密码">
+                            <el-input v-model="pwdForm.newPassword" type="password" show-password placeholder="至少 6 位" />
+                        </el-form-item>
+                    </div>
+                    <el-form-item label="确认新密码">
+                        <el-input v-model="pwdForm.confirm" type="password" show-password />
+                    </el-form-item>
+                </el-form>
+                <div class="panel-foot">
+                    <button type="button" class="btn ghost" :disabled="saving" @click="changePassword">修改密码</button>
+                </div>
+            </div>
+        </template>
+    </div>
+
+    <!-- ============ 消息中心 ============ -->
+    <div class="wrap" v-else-if="view === 'notify'">
+        <h2 style="font-size:22px;margin-bottom:6px">消息中心</h2>
+        <p style="font-size:13px;color:var(--ink3);margin-bottom:22px">领养申请的每一步、捐赠回执都会推到这里</p>
+
+        <div class="empty" v-if="!user">
+            登录后可查看消息，
+            <a style="color:var(--brand);cursor:pointer" @click="openLogin(false)">立即登录</a>
+        </div>
+
+        <template v-else>
+            <div class="filters">
+                <div class="tabs">
+                    <button :class="{ on: msgFilter === null }" @click="setMsgFilter(null)">全部</button>
+                    <button :class="{ on: msgFilter === 0 }" @click="setMsgFilter(0)">未读</button>
+                    <button :class="{ on: msgFilter === 1 }" @click="setMsgFilter(1)">已读</button>
+                </div>
+                <div class="spacer"></div>
+                <button type="button" class="btn ghost" @click="markAllRead">全部标为已读</button>
+            </div>
+
+            <div class="panel">
+                <div class="empty" style="padding:50px 0" v-if="msgLoading">正在加载消息…</div>
+                <div class="empty" style="padding:50px 0" v-else-if="!messages.length">暂无消息</div>
+                <div v-else>
+                    <div class="msg-item" v-for="m in messages" :key="m.id">
+                        <div class="ico">{{ msgIcon(m.type) }}</div>
+                        <div class="body">
+                            <div class="t">
+                                {{ m.title }}
+                                <span class="new" v-if="!m.readFlag">未读</span>
+                            </div>
+                            <div class="c">{{ m.content }}</div>
+                            <div class="d">{{ m.createTime }}</div>
+                        </div>
+                        <button v-if="!m.readFlag" type="button" class="btn ghost"
+                                style="padding:5px 12px;font-size:12px" @click="markRead(m)">标为已读</button>
+                    </div>
+                </div>
+            </div>
+        </template>
+    </div>
+
+    <!-- ============ 页脚 ============ -->
+    <footer class="foot">
+        PawHome 城市流浪动物救助站 · 领养代替购买，绝育代替捕杀<br>
+        本平台为课程设计作品，数据仅用于教学演示
+    </footer>
+
+    <!-- ============ 详情弹窗 ============ -->
+    <el-dialog v-model="detailVisible" width="820px" :show-close="true" align-center>
+        <div class="detail" v-if="detail">
+            <div class="pic">
+                <img :src="detail.coverImage" :alt="detail.name" @error="onImgError">
+            </div>
+            <div class="info">
+                <h2>{{ detail.name }}</h2>
+                <div class="no">{{ detail.animalNo }}</div>
+                <div class="kv">
+                    <div><span>品种</span>{{ detail.breed || '—' }}</div>
+                    <div><span>性别</span>{{ detail.genderText }}</div>
+                    <div><span>年龄</span>{{ detail.ageText }}</div>
+                    <div><span>体重</span>{{ detail.weight ? detail.weight + ' kg' : '—' }}</div>
+                    <div><span>救助地</span>{{ detail.rescueCity || '—' }}</div>
+                    <div><span>救助日期</span>{{ detail.rescueDate || '—' }}</div>
+                </div>
+                <div class="health-row">
+                    <el-tag size="small" :type="detail.healthStatus === 'HEALTHY' ? 'success' : 'warning'" effect="plain">{{ detail.healthStatusText }}</el-tag>
+                    <el-tag size="small" :type="detail.sterilized === 1 ? 'success' : 'info'" effect="plain">{{ detail.sterilized === 1 ? '已绝育' : '未绝育' }}</el-tag>
+                    <el-tag size="small" :type="detail.vaccinated === 1 ? 'success' : 'info'" effect="plain">{{ detail.vaccinated === 1 ? '已疫苗' : '未疫苗' }}</el-tag>
+                    <el-tag size="small" :type="detail.dewormed === 1 ? 'success' : 'info'" effect="plain">{{ detail.dewormed === 1 ? '已驱虫' : '未驱虫' }}</el-tag>
+                </div>
+                <div class="desc">{{ detail.description || '这只小家伙还在等一个愿意了解它的人，欢迎到站探访。' }}</div>
+                <button class="btn block" @click="goApply(detail)" :disabled="!canApply(detail)">
+                    {{ canApply(detail) ? '申请领养它' : statusLabel(detail) + '，暂不能申请' }}
+                </button>
+            </div>
+        </div>
+    </el-dialog>
+
+    <!-- ============ 登录 / 注册 ============ -->
+    <el-dialog v-model="loginVisible" width="420px" :title="registerMode ? '注册领养账号' : '登录'" align-center>
+        <div v-if="authError" style="font-size:13px;color:#b3261e;background:#fdecea;border:1px solid #f5c6c2;border-radius:9px;padding:10px 14px;margin-bottom:14px">
+            {{ authError }}
+        </div>
+        <el-form label-position="top" @submit.prevent>
+            <el-form-item label="账号">
+                <el-input v-model="loginForm.username" size="large"
+                          :placeholder="registerMode ? '4-20 位字母、数字或下划线' : '请输入账号'" />
+            </el-form-item>
+            <el-form-item label="密码">
+                <el-input v-model="loginForm.password" size="large" type="password" show-password
+                          :placeholder="registerMode ? '至少 6 位' : '请输入密码'" @keyup.enter="doLogin" />
+            </el-form-item>
+            <template v-if="registerMode">
+                <el-form-item label="姓名">
+                    <el-input v-model="regForm.realName" size="large" placeholder="怎么称呼您" />
+                </el-form-item>
+                <el-form-item label="手机号">
+                    <el-input v-model="regForm.phone" size="large" placeholder="选填，11 位手机号，用于领养回访" />
+                </el-form-item>
+            </template>
+        </el-form>
+        <div style="display:flex;gap:10px;margin-top:6px">
+            <button class="btn block" style="flex:1" @click="registerMode ? doRegister() : doLogin()">
+                {{ registerMode ? '注册并登录' : '登录' }}
+            </button>
+        </div>
+        <div style="text-align:center;margin-top:14px;font-size:12.5px;color:var(--ink3)">
+            <a style="color:var(--brand);cursor:pointer" @click="toggleMode">
+                {{ registerMode ? '已有账号？去登录' : '还没有账号？注册一个' }}
+            </a>
+        </div>
+        <div style="margin-top:14px;padding:11px 13px;background:#fbf8f5;border-radius:9px;font-size:12px;color:var(--ink2);line-height:1.8">
+            演示账号：<b style="color:var(--brand)">user01 / 123456</b>（领养人）<br>
+            管理员请从 <b style="color:var(--brand)">admin.html</b> 登录后台
+        </div>
+    </el-dialog>
+
+    <!-- ============ 申请表单 ============ -->
+    <el-dialog v-model="applyVisible" width="560px" title="提交领养申请" align-center>
+        <div style="font-size:13px;color:var(--ink2);background:#fbf8f5;border-radius:9px;padding:11px 14px;margin-bottom:16px">
+            申请领养：<b>{{ applyForm.animalName }}</b> · 提交后工作人员会电话联系您核实
+        </div>
+        <div v-if="formError" style="font-size:13px;color:#b3261e;background:#fdecea;border:1px solid #f5c6c2;border-radius:9px;padding:10px 14px;margin-bottom:14px">
+            {{ formError }}
+        </div>
+        <el-form label-position="top" @submit.prevent>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 14px">
+                <el-form-item label="姓名">
+                    <el-input v-model="applyForm.applicantName" placeholder="真实姓名" />
+                </el-form-item>
+                <el-form-item label="联系电话">
+                    <el-input v-model="applyForm.phone" placeholder="手机号" />
+                </el-form-item>
+                <el-form-item label="所在城市">
+                    <el-input v-model="applyForm.city" placeholder="如：杭州" />
+                </el-form-item>
+                <el-form-item label="职业">
+                    <el-input v-model="applyForm.occupation" placeholder="如：教师" />
+                </el-form-item>
+                <el-form-item label="家庭人数">
+                    <el-input-number v-model="applyForm.familyMember" :min="1" :max="20" style="width:100%" />
+                </el-form-item>
+                <el-form-item label="是否有养宠经验">
+                    <div class="radio-row">
+                        <label><input type="radio" :value="1" v-model.number="applyForm.hasPetExperience"> 有经验</label>
+                        <label><input type="radio" :value="0" v-model.number="applyForm.hasPetExperience"> 没有</label>
+                    </div>
+                </el-form-item>
+            </div>
+            <el-form-item label="居住地址">
+                <el-input v-model="applyForm.address" placeholder="详细地址，用于回访" />
+            </el-form-item>
+            <el-form-item label="是否有稳定收入">
+                    <div class="radio-row">
+                        <label><input type="radio" :value="1" v-model.number="applyForm.hasStableIncome"> 有稳定收入</label>
+                        <label><input type="radio" :value="0" v-model.number="applyForm.hasStableIncome"> 暂无</label>
+                    </div>
+                </el-form-item>
+            <el-form-item label="领养理由">
+                <el-input v-model="applyForm.reason" type="textarea" :rows="3" placeholder="简单说说你为什么想领养它，以及打算怎么照顾它" />
+            </el-form-item>
+        </el-form>
+        <template #footer>
+            <el-button @click="applyVisible = false">再想想</el-button>
+            <el-button type="primary" :loading="submitting" @click.stop="submitApply">
+                {{ submitting ? '正在提交…' : '提交申请' }}
+            </el-button>
+        </template>
+    </el-dialog>
+</div>
+
+<script>
+    const { createApp } = Vue;
+    // 这两个必须显式取出来：Element Plus 的 UMD 只挂在 ElementPlus 对象上，
+    // 直接写 ElMessage 会抛 ReferenceError，导致接口成功了却卡在半路
+    const ElMessage = ElementPlus.ElMessage;
+    const ElMessageBox = ElementPlus.ElMessageBox;
+
+    const http = axios.create({ baseURL: '/api', timeout: 30000 });
+    http.interceptors.request.use(cfg => {
+        const t = localStorage.getItem('pawhome_token');
+        if (t) cfg.headers.Authorization = 'Bearer ' + t;
+        return cfg;
+    });
+    http.interceptors.response.use(res => {
+        const d = res.data;
+        if (d && typeof d === 'object' && 'code' in d) {
+            if (d.code !== 200) {
+                ElMessage.error(d.message || '操作失败');
+                return Promise.reject(d);
+            }
+            return d.data;
+        }
+        return d;
+    }, err => {
+        const status = err.response && err.response.status;
+        if (status === 401) {
+            localStorage.removeItem('pawhome_token');
+            localStorage.removeItem('pawhome_user');
+            ElMessage.error('登录已过期，请重新登录');
+            setTimeout(() => location.reload(), 900);
+        } else if (status === 429) {
+            ElMessage.error('操作太频繁了，请等 2 秒再试');
+        } else if (!err.response) {
+            ElMessage.error(err.code === 'ECONNABORTED'
+                ? '请求超时了，请稍后重试'
+                : '连不上服务，请确认后端已启动');
+        } else {
+            const d = err.response.data;
+            ElMessage.error((d && (d.message || d.msg)) || ('请求失败（HTTP ' + status + '）'));
+        }
+        return Promise.reject(err);
+    });
+
+    createApp({
+        data() {
+            return {
+                view: 'home',
+                loading: false,
+                pets: [],
+                keyword: '',
+                species: '',
+                user: JSON.parse(localStorage.getItem('pawhome_user') || 'null'),
+                detail: null,
+                detailVisible: false,
+                loginVisible: false,
+                registerMode: false,
+                loginForm: { username: '', password: '' },
+                regForm: { realName: '', phone: '' },
+                applyVisible: false,
+                submitting: false,
+                pendingAnimal: null,
+                formError: '',
+                authError: '',
+                mineLoading: false,
+                mineError: '',
+                applyForm: {
+                    animalId: null, animalName: '', applicantName: '', phone: '', city: '',
+                    address: '', occupation: '', familyMember: 1,
+                    hasPetExperience: 1, hasStableIncome: 1, reason: ''
+                },
+                // ---- 爱心捐赠 ----
+                donating: false, donateLoading: false,
+                myDonations: [], supplyOptions: [],
+                donateForm: {
+                    type: 'MONEY', donorName: '', donorPhone: '',
+                    amount: 100, supplyItemId: null, quantity: 1, itemDesc: '', remark: ''
+                },
+                // ---- 我的资料 ----
+                saving: false,
+                profileForm: { realName: '', phone: '', email: '' },
+                pwdForm: { oldPassword: '', newPassword: '', confirm: '' },
+                // ---- 消息 ----
+                messages: [], msgLoading: false, msgFilter: null, unread: 0
+            };
+        },
+        computed: {
+            filtered() {
+                const k = this.keyword.trim();
+                return this.pets.filter(a => {
+                    if (this.species && a.species !== this.species) return false;
+                    if (!k) return true;
+                    return (a.name || '').includes(k) || (a.breed || '').includes(k);
+                });
+            },
+            catCount() { return this.pets.filter(a => a.species === 'CAT').length; },
+            dogCount() { return this.pets.filter(a => a.species === 'DOG').length; }
+        },
+        mounted() {
+            this.loadPets();
+            if (this.user) this.loadUnread();
+        },
+        methods: {
+            async loadPets(silent) {
+                // silent = 静默刷新：不显示"正在加载"、失败也不清空列表，
+                // 避免提交成功后的刷新把列表闪一下，让人以为数据没变
+                if (!silent) this.loading = true;
+                try {
+                    const list = await http.get('/animal/public/waiting', { params: { limit: 60 } });
+                    this.pets = Array.isArray(list) ? list : [];
+                } catch (e) {
+                    if (!silent) this.pets = [];
+                } finally {
+                    if (!silent) this.loading = false;
+                }
+            },
+            onImgError(e) {
+                e.target.style.visibility = 'hidden';
+            },
+            openDetail(a) {
+                this.detail = a;
+                this.detailVisible = true;
+            },
+            goApply(a) {
+                if (a.adoptStatus !== 'WAITING') {
+                    ElMessage.warning('这只动物已有申请在处理中');
+                    return;
+                }
+                if (a.healthStatus !== 'HEALTHY') {
+                    ElMessage.warning('这只动物目前' + this.statusLabel(a) + '，需要康复后才能申请领养');
+                    return;
+                }
+                if (!this.user) {
+                    this.pendingAnimal = a;
+                    this.detailVisible = false;
+                    this.openLogin(false);
+                    return;
+                }
+                if (this.user.role !== 'ADOPTER') {
+                    ElMessage.warning('当前登录的是管理侧账号，请用领养人账号申请');
+                    return;
+                }
+                this.applyForm = {
+                    animalId: a.id,
+                    animalName: a.name,
+                    applicantName: this.user.realName || '',
+                    phone: this.user.phone || '',
+                    city: a.rescueCity || '',
+                    address: '',
+                    occupation: '',
+                    familyMember: 1,
+                    hasPetExperience: 1,
+                    hasStableIncome: 1,
+                    reason: ''
+                };
+                this.formError = '';
+                // 详情弹窗和申请弹窗同时切换时动画会互相打断，先关详情再开申请
+                this.detailVisible = false;
+                this.$nextTick(() => {
+                    this.applyVisible = true;
+                });
+            },
+            async submitApply() {
+                const f = this.applyForm;
+                const miss = [];
+                if (!f.applicantName) miss.push('姓名');
+                if (!f.phone) miss.push('联系电话');
+                if (!f.address) miss.push('居住地址');
+                if (!f.reason) miss.push('领养理由');
+                if (miss.length) {
+                    // 除了顶部轻提示，还在弹窗里常驻一条红条，避免提示一闪而过被忽略
+                    this.formError = '还有必填项没填：' + miss.join('、');
+                    ElMessage.warning('请补充：' + miss.join('、'));
+                    return;
+                }
+                this.formError = '';
+                this.submitting = true;
+                try {
+                    await http.post('/adoption/apply', {
+                        animalId: f.animalId,
+                        applicantName: f.applicantName,
+                        phone: f.phone,
+                        city: f.city,
+                        address: f.address,
+                        occupation: f.occupation,
+                        familyMember: f.familyMember,
+                        hasPetExperience: f.hasPetExperience,
+                        hasStableIncome: f.hasStableIncome,
+                        reason: f.reason
+                    });
+                    this.applyVisible = false;
+                    ElMessage.success('申请已提交，我们会尽快联系您');
+                    // 先从本地列表移除这只动物，立刻能看到变化；再静默同步服务端数据
+                    this.pets = this.pets.filter(p => String(p.id) !== String(f.animalId));
+                    this.loadPets(true);
+                } catch (e) {
+                    // 拦截器已弹出后端给出的具体原因；这里再静默同步一次列表，
+                    // 如果失败原因是"动物已被申请"，界面也能立刻反映真实状态
+                    this.loadPets(true);
+                } finally {
+                    this.submitting = false;
+                }
+            },
+            openLogin(register) {
+                this.registerMode = !!register;
+                this.authError = '';
+                this.loginVisible = true;
+            },
+            errMsg(e) {
+                if (!e) return '操作失败，请稍后重试';
+                const d = e.response && e.response.data;
+                if (d && (d.message || d.msg)) return d.message || d.msg;
+                if (e.message && e.message.indexOf('Request failed') < 0) return e.message;
+                if (e.code) return '操作失败（错误码 ' + e.code + '）';
+                return '操作失败，请稍后重试';
+            },
+            toggleMode() {
+                this.registerMode = !this.registerMode;
+            },
+            async doLogin() {
+                if (!this.loginForm.username || !this.loginForm.password) {
+                    ElMessage.warning('请输入账号和密码');
+                    return;
+                }
+                try {
+                    const data = await http.post('/auth/login', this.loginForm);
+                    localStorage.setItem('pawhome_token', data.token);
+                    localStorage.setItem('pawhome_user', JSON.stringify(data.user));
+                    this.user = data.user;
+                    this.loginVisible = false;
+                    if (data.user.role === 'ADOPTER') {
+                        ElMessage.success('欢迎回来，' + (data.user.realName || data.user.username));
+                        this.loadUnread();
+                        if (this.pendingAnimal) {
+                            const a = this.pendingAnimal;
+                            this.pendingAnimal = null;
+                            this.$nextTick(() => this.goApply(a));
+                        }
+                    } else {
+                        ElMessage.success('检测到管理侧账号，正在进入管理后台…');
+                        setTimeout(() => { location.href = '/admin.html'; }, 800);
+                    }
+                } catch (e) {
+                    this.authError = this.errMsg(e);
+                }
+            },
+            async doRegister() {
+                const f = this.loginForm, r = this.regForm;
+                if (!f.username || !f.password || !r.realName) {
+                    ElMessage.warning('账号、密码、姓名都要填');
+                    return;
+                }
+                if (!/^[a-zA-Z0-9_]{4,20}$/.test(f.username)) {
+                    ElMessage.warning('账号需 4-20 位，只能用字母、数字、下划线');
+                    return;
+                }
+                if (f.password.length < 6) {
+                    ElMessage.warning('密码至少 6 位');
+                    return;
+                }
+                if (r.phone && !/^1[3-9]\d{9}$/.test(r.phone)) {
+                    ElMessage.warning('手机号格式不正确（留空也可以）');
+                    return;
+                }
+                try {
+                    await http.post('/auth/register', {
+                        username: f.username,
+                        password: f.password,
+                        realName: r.realName,
+                        phone: r.phone || null,
+                        role: 'ADOPTER'
+                    });
+                    ElMessage.success('注册成功，正在为您登录');
+                    await this.doLogin();
+                } catch (e) {
+                    this.authError = this.errMsg(e);
+                }
+            },
+            goMine() {
+                this.view = 'mine';
+                // 从长列表切到短页面时浏览器会保留滚动位置，不回到顶部就是一片空白
+                window.scrollTo(0, 0);
+                this.mineError = '';
+                this.loadMine();
+            },
+            goHome() {
+                this.view = 'home';
+                window.scrollTo(0, 0);
+            },
+            async loadMine() {
+                if (!this.user) {
+                    this.mineError = '当前未登录，请先登录';
+                    this.myApplies = [];
+                    return;
+                }
+                // 管理侧账号（管理员/员工/志愿者）名下没有领养申请，不必请求接口
+                if (this.user.role !== 'ADOPTER') {
+                    this.myApplies = [];
+                    this.mineLoading = false;
+                    this.mineError = '';
+                    return;
+                }
+                this.mineLoading = true;
+                this.mineError = '';
+                try {
+                    const list = await http.get('/adoption/my');
+                    if (Array.isArray(list)) {
+                        this.myApplies = list.filter(x => x && x.id);
+                    } else {
+                        this.myApplies = [];
+                        this.mineError = '返回数据格式异常，请刷新重试';
+                    }
+                } catch (e) {
+                    this.myApplies = [];
+                    this.mineError = this.errMsg(e);
+                } finally {
+                    this.mineLoading = false;
+                }
+            },
+            async cancelApply(r) {
+                try {
+                    await ElMessageBox.confirm(
+                        `确定取消对「${r.animalName}」的领养申请吗？取消后可以重新申请`,
+                        '取消申请', { type: 'warning' }
+                    );
+                } catch (e) { return; }
+                try {
+                    await http.post(`/adoption/${r.id}/cancel`, null, {
+                        params: { reason: '领养人主动取消' }
+                    });
+                    ElMessage.success('申请已取消');
+                    this.loadMine();
+                } catch (e) {
+                    // 拦截器已给出具体原因
+                }
+            },
+            statusType(s) {
+                return { PENDING: 'warning', APPROVED: 'success', PASSED: 'success', REJECTED: 'danger', CANCELED: 'info' }[s] || 'info';
+            },
+            // 只有「待领养 + 健康」才允许提交申请；治疗中/康复中只展示不开放
+            canApply(a) {
+                return !!a && a.adoptStatus === 'WAITING' && a.healthStatus === 'HEALTHY';
+            },
+            statusLabel(a) {
+                if (!a) return '';
+                if (a.adoptStatus === 'APPLYING') return '申请审核中';
+                if (a.adoptStatus === 'ADOPTED') return '已被领养';
+                if (a.healthStatus === 'TREATING') return '治疗中';
+                if (a.healthStatus === 'RECOVERING') return '康复中';
+                if (a.healthStatus === 'DISABLED') return '特殊照顾';
+                return '等待领养';
+            },
+            roleText(role) {
+                return { ADMIN: '管理员', STAFF: '救助站员工', VOLUNTEER: '志愿者', ADOPTER: '领养人' }[role] || role || '';
+            },
+            toAdmin() {
+                location.href = '/admin.html';
+            },
+            logout() {
+                localStorage.removeItem('pawhome_token');
+                localStorage.removeItem('pawhome_user');
+                this.user = null;
+                this.myApplies = [];
+                this.view = 'home';
+                ElMessage.success('已退出登录');
+            },
+
+            /* ==================== 爱心捐赠 ==================== */
+            goDonate() {
+                this.view = 'donate';
+                window.scrollTo(0, 0);
+                if (!this.user) return;
+                if (!this.donateForm.donorName) this.donateForm.donorName = this.user.realName || '';
+                if (!this.donateForm.donorPhone) this.donateForm.donorPhone = this.user.phone || '';
+                this.loadMyDonations();
+                this.loadSupplyOptions();
+            },
+            async loadMyDonations() {
+                if (!this.user) return;
+                this.donateLoading = true;
+                try {
+                    const list = await http.get('/donation/my');
+                    this.myDonations = Array.isArray(list) ? list : [];
+                } catch (e) {
+                    this.myDonations = [];
+                } finally {
+                    this.donateLoading = false;
+                }
+            },
+            async loadSupplyOptions() {
+                if (this.supplyOptions.length) return;
+                try {
+                    const data = await http.get('/supply/items', { params: { pageNum: 1, pageSize: 100 } });
+                    this.supplyOptions = (data && data.records) || [];
+                } catch (e) {
+                    this.supplyOptions = [];
+                }
+            },
+            async submitDonation() {
+                const f = this.donateForm;
+                if (!f.donorName) { ElMessage.warning('请填写捐赠人'); return; }
+                if (f.type === 'MONEY' && !f.amount) { ElMessage.warning('请填写捐赠金额'); return; }
+                if (f.type === 'GOODS' && (!f.supplyItemId || !f.quantity)) {
+                    ElMessage.warning('请选择要捐赠的物资并填写数量');
+                    return;
+                }
+                const picked = this.supplyOptions.find(x => String(x.id) === String(f.supplyItemId));
+                this.donating = true;
+                try {
+                    const no = await http.post('/donation/create', {
+                        donorName: f.donorName,
+                        donorPhone: f.donorPhone,
+                        donorType: 'PERSON',
+                        type: f.type,
+                        amount: f.type === 'MONEY' ? f.amount : null,
+                        itemDesc: f.type === 'GOODS' ? (f.itemDesc || (picked ? picked.name : '物资')) : null,
+                        supplyItemId: f.type === 'GOODS' ? f.supplyItemId : null,
+                        quantity: f.type === 'GOODS' ? f.quantity : 0,
+                        remark: f.remark
+                    });
+                    ElMessage.success('捐赠单已提交，请在下方「我的捐赠」完成支付');
+                    this.donateForm.remark = '';
+                    this.loadMyDonations();
+                } catch (e) {
+                    // 拦截器已给出具体原因
+                } finally {
+                    this.donating = false;
+                }
+            },
+            async payDonation(d) {
+                try {
+                    await ElMessageBox.confirm(
+                        d.type === 'GOODS'
+                            ? '支付后系统会自动把物资登记入库，确定继续？'
+                            : '确认模拟支付这笔捐赠吗？',
+                        '支付确认', { type: 'info' }
+                    );
+                } catch (e) { return; }
+                try {
+                    const status = await http.post(`/donation/${d.donationNo}/pay`);
+                    ElMessage.success(status === 'STORED' ? '支付成功，物资已入库' : '支付成功，谢谢你的爱心');
+                    this.loadMyDonations();
+                } catch (e) {
+                    // 拦截器已给出具体原因
+                }
+            },
+            async cancelDonation(d) {
+                try {
+                    await ElMessageBox.confirm('取消后这张捐赠单作废，确定吗？', '取消捐赠', { type: 'warning' });
+                } catch (e) { return; }
+                try {
+                    await http.post(`/donation/${d.donationNo}/cancel`);
+                    ElMessage.success('捐赠单已取消');
+                    this.loadMyDonations();
+                } catch (e) {
+                    // 拦截器已给出具体原因
+                }
+            },
+            donationStatusText(s) {
+                return { INIT: '待支付', PAID: '已支付', STORED: '已入库', FAILED: '入库失败', CANCELED: '已取消' }[s] || s;
+            },
+            donateTag(s) {
+                return { PAID: 'ok', STORED: 'ok', INIT: 'wait', FAILED: 'bad' }[s] || '';
+            },
+
+            /* ==================== 我的资料 ==================== */
+            async goProfile() {
+                this.view = 'profile';
+                window.scrollTo(0, 0);
+                if (!this.user) return;
+                this.profileForm = {
+                    realName: this.user.realName || '',
+                    phone: this.user.phone || '',
+                    email: this.user.email || ''
+                };
+                this.pwdForm = { oldPassword: '', newPassword: '', confirm: '' };
+                // 顺手从服务端拉一次最新资料，避免本地缓存与数据库不一致
+                try {
+                    const me = await http.get('/auth/me');
+                    if (me) {
+                        this.user = Object.assign({}, this.user, me);
+                        localStorage.setItem('pawhome_user', JSON.stringify(this.user));
+                        this.profileForm = {
+                            realName: me.realName || '',
+                            phone: me.phone || '',
+                            email: me.email || ''
+                        };
+                    }
+                } catch (e) { /* 忽略，继续用本地缓存 */ }
+            },
+            async saveProfile() {
+                const f = this.profileForm;
+                if (!f.realName || !f.realName.trim()) { ElMessage.warning('姓名不能为空'); return; }
+                if (f.phone && !/^1[3-9]\d{9}$/.test(f.phone)) {
+                    ElMessage.warning('手机号请填写 11 位数字，或留空');
+                    return;
+                }
+                this.saving = true;
+                try {
+                    const vo = await http.put('/auth/profile', {
+                        realName: f.realName.trim(),
+                        phone: f.phone || '',
+                        email: f.email || ''
+                    });
+                    this.user = Object.assign({}, this.user, vo);
+                    localStorage.setItem('pawhome_user', JSON.stringify(this.user));
+                    ElMessage.success('资料已更新');
+                } catch (e) {
+                    // 拦截器已给出具体原因（如手机号格式不对）
+                } finally {
+                    this.saving = false;
+                }
+            },
+            async changePassword() {
+                const f = this.pwdForm;
+                if (!f.oldPassword || !f.newPassword) {
+                    ElMessage.warning('请填写原密码和新密码');
+                    return;
+                }
+                if (f.newPassword.length < 6) { ElMessage.warning('新密码至少 6 位'); return; }
+                if (f.newPassword !== f.confirm) { ElMessage.warning('两次输入的新密码不一致'); return; }
+                this.saving = true;
+                try {
+                    await http.put('/auth/profile/password', {
+                        oldPassword: f.oldPassword,
+                        newPassword: f.newPassword
+                    });
+                    ElMessage.success('密码已修改，请用新密码重新登录');
+                    setTimeout(() => {
+                        localStorage.removeItem('pawhome_token');
+                        localStorage.removeItem('pawhome_user');
+                        location.reload();
+                    }, 1200);
+                } catch (e) {
+                    // 拦截器已给出具体原因（如原密码不正确）
+                } finally {
+                    this.saving = false;
+                }
+            },
+
+            /* ==================== 消息中心 ==================== */
+            goNotify() {
+                this.view = 'notify';
+                window.scrollTo(0, 0);
+                if (this.user) {
+                    this.loadMessages();
+                    this.loadUnread();
+                }
+            },
+            setMsgFilter(f) {
+                this.msgFilter = f;
+                this.loadMessages();
+            },
+            async loadMessages() {
+                if (!this.user) return;
+                this.msgLoading = true;
+                try {
+                    const data = await http.get('/notify/messages', {
+                        params: { pageNum: 1, pageSize: 50, readFlag: this.msgFilter }
+                    });
+                    this.messages = (data && data.records) || [];
+                } catch (e) {
+                    this.messages = [];
+                } finally {
+                    this.msgLoading = false;
+                }
+            },
+            async loadUnread() {
+                try {
+                    const data = await http.get('/notify/unread-count');
+                    this.unread = (data && data.count) || 0;
+                } catch (e) {
+                    this.unread = 0;
+                }
+            },
+            async markRead(m) {
+                try {
+                    await http.put(`/notify/messages/${m.id}/read`);
+                    m.readFlag = 1;
+                    this.loadUnread();
+                } catch (e) {
+                    // 拦截器已提示
+                }
+            },
+            async markAllRead() {
+                try {
+                    await http.put('/notify/messages/read-all');
+                    ElMessage.success('已全部标为已读');
+                    this.loadMessages();
+                    this.loadUnread();
+                } catch (e) {
+                    // 拦截器已提示
+                }
+            },
+            msgIcon(t) {
+                return { ADOPTION: '📝', SUPPLY: '📦', DONATION: '💝', VOLUNTEER: '🤝', SYSTEM: '🔔' }[t] || '🔔';
+            }
+        }
+    }).use(ElementPlus).mount('#app');
+</script>
+</body>
+</html>

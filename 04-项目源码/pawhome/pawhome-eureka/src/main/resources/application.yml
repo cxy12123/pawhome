@@ -1,0 +1,33 @@
+server:
+  port: 8761
+
+spring:
+  application:
+    name: pawhome-eureka
+
+eureka:
+  instance:
+    hostname: localhost
+  client:
+    # 注册中心自己不需要注册，也不需要拉取注册表
+    register-with-eureka: false
+    fetch-registry: false
+    service-url:
+      defaultZone: http://${eureka.instance.hostname}:${server.port}/eureka/
+  server:
+    # 答辩演示时服务上下线能立即反映到面板，不用干等 30 秒
+    enable-self-preservation: false
+    eviction-interval-timer-in-ms: 5000
+    response-cache-update-interval-ms: 2000
+    response-cache-auto-expiration-in-seconds: 10
+
+logging:
+  level:
+    com.netflix.eureka: WARN
+    com.netflix.discovery: WARN
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

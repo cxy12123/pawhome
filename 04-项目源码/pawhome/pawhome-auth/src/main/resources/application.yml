@@ -1,0 +1,117 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: pawhome-auth
+
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${MYSQL_HOST:127.0.0.1}:${MYSQL_PORT:3306}/pawhome_auth?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true
+    username: ${MYSQL_USERNAME:root}
+    # 改成你自己的 MySQL 密码，或在 IDEA 运行配置里设置环境变量 MYSQL_PASSWORD
+    password: ${MYSQL_PASSWORD:123456}
+    hikari:
+      minimum-idle: 3
+      maximum-pool-size: 10
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+      database: 1
+      timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+
+  cloud:
+    nacos:
+      discovery:
+        enabled: false   # registry -> Eureka, Nacos keeps config center only
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+        username: ${NACOS_USERNAME:nacos}
+        password: ${NACOS_PASSWORD:nacos}
+        namespace: ${NACOS_NAMESPACE:public}
+    sentinel:
+      # 控制台默认占用 8080，与本项目网关冲突，所以必须改成 8085 启动
+      transport:
+        dashboard: ${SENTINEL_DASHBOARD:127.0.0.1:8858}
+        port: 8719
+      eager: true
+      # 把限流规则持久化到 Nacos，避免控制台重启后规则丢失（默认关闭，需要时打开）
+      # datasource:
+      #   flow:
+      #     nacos:
+      #       server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+      #       data-id: pawhome-auth-flow-rules
+      #       group-id: SENTINEL_GROUP
+      #       data-type: json
+      #       rule-type: flow
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    # 开发期打印 SQL，方便确认是否命中索引；上线请改成 NoLoggingImpl
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    banner: false
+    db-config:
+      id-type: assign_id
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+
+pawhome:
+  jwt:
+    secret: ${JWT_SECRET:pawhome-secret-key-2026-must-be-at-least-32-bytes-long}
+    expire-hours: 24
+    max-fail-count: 5
+    lock-minutes: 15
+
+logging:
+  level:
+    com.pawhome: DEBUG
+    com.pawhome.auth.mapper: DEBUG
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %clr(%5p) %clr([%X{traceId:-no-trace}]){magenta} %clr(%-40.40logger{39}){cyan} : %m%n"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+# ---------- Eureka client (textbook 11.4.2 / 11.5.3) ----------
+# Service registration runs on Eureka; Nacos keeps configuration only.
+# Spring Cloud allows one service-registry implementation per app,
+# so Nacos discovery is disabled above.
+eureka:
+  client:
+    service-url:
+      defaultZone: http://${EUREKA_HOST:localhost}:${EUREKA_PORT:8761}/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+    registry-fetch-interval-seconds: 5
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${server.port}
+    lease-renewal-interval-in-seconds: 10
+    lease-expiration-duration-in-seconds: 30

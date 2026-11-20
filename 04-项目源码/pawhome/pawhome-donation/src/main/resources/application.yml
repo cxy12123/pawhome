@@ -1,0 +1,99 @@
+server:
+  port: 8085
+
+spring:
+  application:
+    name: pawhome-donation
+
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${MYSQL_HOST:127.0.0.1}:${MYSQL_PORT:3306}/pawhome_donation?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true
+    username: ${MYSQL_USERNAME:root}
+    password: ${MYSQL_PASSWORD:123456}
+    hikari:
+      minimum-idle: 3
+      maximum-pool-size: 10
+
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+      database: 5
+      timeout: 3000ms
+
+  cloud:
+    nacos:
+      discovery:
+        enabled: false   # registry -> Eureka, Nacos keeps config center only
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+        username: ${NACOS_USERNAME:nacos}
+        password: ${NACOS_PASSWORD:nacos}
+        namespace: ${NACOS_NAMESPACE:public}
+    sentinel:
+      transport:
+        # Sentinel 控制台端口定为 8858，避免与 8080 网关冲突
+        dashboard: ${SENTINEL_DASHBOARD:127.0.0.1:8858}
+        port: 8723
+      eager: true
+    openfeign:
+      client:
+        config:
+          default:
+            connect-timeout: 2000
+            read-timeout: 5000
+
+feign:
+  sentinel:
+    enabled: true
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    banner: false
+    db-config:
+      id-type: assign_id
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+
+logging:
+  level:
+    com.pawhome: DEBUG
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %clr(%5p) %clr([%X{traceId:-no-trace}]){magenta} %clr(%-40.40logger{39}){cyan} : %m%n"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+# ---------- Eureka client (textbook 11.4.2 / 11.5.3) ----------
+# Service registration runs on Eureka; Nacos keeps configuration only.
+# Spring Cloud allows one service-registry implementation per app,
+# so Nacos discovery is disabled above.
+eureka:
+  client:
+    service-url:
+      defaultZone: http://${EUREKA_HOST:localhost}:${EUREKA_PORT:8761}/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+    registry-fetch-interval-seconds: 5
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${server.port}
+    lease-renewal-interval-in-seconds: 10
+    lease-expiration-duration-in-seconds: 30

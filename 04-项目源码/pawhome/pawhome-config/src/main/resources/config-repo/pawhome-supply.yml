@@ -1,0 +1,25 @@
+# ============================================================
+# pawhome-supply 的集中配置（由 pawhome-config 下发）
+# 访问 http://localhost:8888/pawhome-supply/default 查看
+#
+# 对应教材 11.4.6「配置中心 Config」/ 11.5.7「配置文件集中管理」
+#
+# 说明：当前项目该配置仍在各服务的 application.yml 与 Nacos 配置中心里，
+#      本文件用于演示 Config Server 的集中管理能力。
+#      若要切换到 Config Server 托管，在服务中引入 config-client 并
+#      指定 spring.config.import=configserver:http://localhost:8888 即可。
+# ============================================================
+pawhome:
+  supply:
+    # 新建物资时的默认预警库存
+    default-warn-stock: 10
+    # 库存跌破预警线时是否推送站内消息
+    notify-on-warn: true
+    # 库存预警消息的接收人（1 = 管理员账号）
+    warn-receiver-id: 1
+    # 单次出入库允许的最大数量，防误操作
+    max-change-quantity: 1000
+    # 分布式锁：等待锁的秒数
+    lock-wait-seconds: 3
+    # 分布式锁：持有锁的秒数（租约）
+    lock-lease-seconds: 10

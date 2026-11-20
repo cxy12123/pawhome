@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.pawhome</groupId>
+        <artifactId>pawhome</artifactId>
+        <version>1.0.0</version>
+    </parent>
+
+    <artifactId>pawhome-api</artifactId>
+    <name>pawhome-api</name>
+    <description>服务间契约模块：Feign 客户端接口 + 传输对象，供各服务共享</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.pawhome</groupId>
+            <artifactId>pawhome-common</artifactId>
+        </dependency>
+        <!-- common 中 lombok 为 optional，不会传递；本模块的 DTO 与降级工厂需要单独声明 -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+    </dependencies>
+</project>

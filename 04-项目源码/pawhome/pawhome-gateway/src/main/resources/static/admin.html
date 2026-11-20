@@ -1,0 +1,2876 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PawHome · 救助站管理后台</title>
+    <link rel="stylesheet" href="/lib/element-plus.css">
+    <script src="/lib/vue.global.prod.js"></script>
+    <script src="/lib/element-plus.full.min.js"></script>
+    <script src="/lib/axios.min.js"></script>
+<script src="/lib/echarts.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --brand: #e8734a;
+            --brand-light: #fff2ec;
+            --ink: #22252b;
+            --ink-2: #5b6068;
+            --ink-3: #8b9099;
+            --line: #ebeef2;
+            --bg: #f6f7f9;
+            --sidebar: #23262e;
+        }
+
+        body {
+            font-family: "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--ink);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        #app { height: 100vh; }
+
+        /* ============ 登录页 ============ */
+        .login-wrap {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #2b2f3a 0%, #3d3244 55%, #6b3f34 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        .login-wrap::before,
+        .login-wrap::after {
+            content: "";
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(90px);
+            opacity: .45;
+        }
+        .login-wrap::before {
+            width: 520px; height: 520px;
+            background: #e8734a;
+            top: -180px; right: -120px;
+        }
+        .login-wrap::after {
+            width: 420px; height: 420px;
+            background: #4a6ce8;
+            bottom: -200px; left: -100px;
+        }
+        .login-card {
+            position: relative;
+            z-index: 2;
+            width: 400px;
+            padding: 40px 36px 32px;
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 24px 60px rgba(0, 0, 0, .28);
+        }
+        .login-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 6px;
+        }
+        .login-logo .paw {
+            width: 40px; height: 40px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #f09067, #e8734a);
+            display: grid; place-items: center;
+            font-size: 21px;
+        }
+        .login-logo h1 {
+            font-size: 19px;
+            font-weight: 700;
+            letter-spacing: -.2px;
+        }
+        .login-sub {
+            font-size: 12.5px;
+            color: var(--ink-3);
+            margin: 0 0 26px 50px;
+        }
+        .login-hint {
+            margin-top: 18px;
+            padding: 11px 13px;
+            background: #f8f9fb;
+            border: 1px dashed #e2e5ea;
+            border-radius: 9px;
+            font-size: 12px;
+            color: var(--ink-2);
+            line-height: 1.75;
+        }
+        .login-hint b { color: var(--brand); }
+
+        /* ============ 主框架 ============ */
+        .layout { display: flex; height: 100vh; overflow: hidden; }
+
+        .sidebar {
+            width: 216px;
+            background: var(--sidebar);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+        .brand {
+            padding: 20px 20px 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid rgba(255,255,255,.07);
+        }
+        .brand .paw {
+            width: 32px; height: 32px;
+            border-radius: 9px;
+            background: linear-gradient(135deg, #f09067, #e8734a);
+            display: grid; place-items: center;
+            font-size: 17px;
+            flex-shrink: 0;
+        }
+        .brand .txt strong {
+            display: block;
+            color: #fff;
+            font-size: 14.5px;
+            font-weight: 650;
+            line-height: 1.25;
+        }
+        .brand .txt span {
+            font-size: 10.5px;
+            color: rgba(255,255,255,.36);
+            letter-spacing: .3px;
+        }
+
+        .menu { flex: 1; padding: 12px 10px; overflow-y: auto; }
+        .menu-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            margin-bottom: 2px;
+            border-radius: 8px;
+            color: rgba(255,255,255,.62);
+            font-size: 13.5px;
+            cursor: pointer;
+            transition: all .15s;
+            user-select: none;
+        }
+        .menu-item:hover { background: rgba(255,255,255,.06); color: rgba(255,255,255,.9); }
+        .menu-item.active { background: var(--brand); color: #fff; font-weight: 600; }
+        .menu-item .ico { width: 16px; text-align: center; font-size: 14px; opacity: .9; }
+        .menu-item .badge {
+            margin-left: auto;
+            background: #ff4d4f;
+            color: #fff;
+            font-size: 10.5px;
+            padding: 1px 6px;
+            border-radius: 9px;
+            font-weight: 600;
+        }
+
+        .side-foot {
+            padding: 14px 16px;
+            border-top: 1px solid rgba(255,255,255,.07);
+            font-size: 11px;
+            color: rgba(255,255,255,.28);
+            line-height: 1.6;
+        }
+
+        /* min-width:0 是关键：flex 子项默认 min-width:auto，宽表格会把容器撑破，
+           导致 Element Plus 计算列宽时与实际可视宽度不一致，出现列错位与右侧空白 */
+        .main { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+
+        .topbar {
+            height: 58px;
+            background: #fff;
+            border-bottom: 1px solid var(--line);
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            gap: 14px;
+            flex-shrink: 0;
+        }
+        .topbar h2 { font-size: 15.5px; font-weight: 650; }
+        .topbar .desc { font-size: 12px; color: var(--ink-3); }
+        .topbar .spacer { flex: 1; }
+        .user-chip {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            padding: 5px 12px 5px 5px;
+            border-radius: 20px;
+            background: #f5f6f8;
+            cursor: pointer;
+            transition: background .15s;
+        }
+        .user-chip:hover { background: #eceef2; }
+        .user-chip .avatar {
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #f09067, #e8734a);
+            color: #fff;
+            display: grid; place-items: center;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .user-chip .meta { line-height: 1.3; }
+        .user-chip .meta b { font-size: 12.5px; display: block; }
+        .user-chip .meta span { font-size: 10.5px; color: var(--ink-3); }
+
+        /* ============ 个人资料弹窗 ============ */
+        .profile-account {
+            display: flex; align-items: center; gap: 12px;
+            padding-bottom: 14px; margin-bottom: 16px;
+            border-bottom: 1px solid #eef0f3;
+        }
+        .profile-account .avatar {
+            width: 42px; height: 42px; border-radius: 50%;
+            background: linear-gradient(135deg, #f09067, #e8734a);
+            color: #fff; display: grid; place-items: center;
+            font-size: 16px; font-weight: 600; flex-shrink: 0;
+        }
+        .profile-account b { display: block; font-size: 15px; }
+        .profile-account span { font-size: 12.5px; color: #8b9099; }
+        .profile-h { font-size: 14px; font-weight: 600; margin: 0 0 12px; }
+        .profile-tip { font-size: 12px; color: #8b9099; line-height: 1.7; margin: -2px 0 8px 90px; }
+        .profile-sep { height: 1px; background: #eef0f3; margin: 16px 0 18px; }
+
+        .content { flex: 1; min-width: 0; overflow-y: auto; overflow-x: hidden; padding: 22px 24px 40px; }
+        /* 卡片必须占满内容区，否则表格拿不到正确宽度 */
+        .content > div { width: 100%; }
+        .content .card { width: 100%; box-sizing: border-box; }
+        /* 双保险：即使 Element Plus 把列宽算成最小宽度，也强制表格铺满卡片 */
+        .content .card .el-table,
+        .content .card .el-table__inner-wrapper { width: 100% !important; }
+
+        /* ============ 通用卡片 ============ */
+        .card {
+            background: #fff;
+            border-radius: 12px;
+            border: 1px solid var(--line);
+            overflow: hidden;
+        }
+        .card-head {
+            padding: 15px 18px;
+            border-bottom: 1px solid var(--line);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .card-head h3 { font-size: 14px; font-weight: 650; }
+        .card-head .sub { font-size: 11.5px; color: var(--ink-3); }
+        .card-head .spacer { flex: 1; }
+        .card-head > * { flex-shrink: 0; }
+        .card-body { padding: 18px; }
+
+        /* ============ 统计卡 ============ */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 14px;
+            margin-bottom: 16px;
+        }
+        .stat {
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 16px 18px;
+            position: relative;
+            overflow: hidden;
+        }
+        .stat::after {
+            content: "";
+            position: absolute;
+            right: -22px; top: -22px;
+            width: 76px; height: 76px;
+            border-radius: 50%;
+            background: var(--brand-light);
+            opacity: .8;
+        }
+        .stat .label { font-size: 12px; color: var(--ink-3); margin-bottom: 8px; position: relative; z-index: 1; }
+        .stat .value { font-size: 26px; font-weight: 700; letter-spacing: -.6px; position: relative; z-index: 1; }
+        .stat .value small { font-size: 12px; font-weight: 500; color: var(--ink-3); margin-left: 3px; }
+        .stat .foot { font-size: 11px; color: var(--ink-3); margin-top: 6px; position: relative; z-index: 1; }
+        .stat.warn .value { color: #e6a23c; }
+        .stat.danger .value { color: #f56c6c; }
+        .stat.good .value { color: #67c23a; }
+
+        /* ============ 工具条 ============ */
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+        }
+        .toolbar .spacer { flex: 1; }
+
+        /* ============ 表格微调 ============ */
+        .el-table th.el-table__cell {
+            background: #fafbfc !important;
+            font-weight: 600;
+            font-size: 12.5px;
+            color: var(--ink-2);
+        }
+        .el-table { font-size: 13px; }
+
+        /* ============ 原生数据表格（替代 el-table，避免列宽计算异常） ============ */
+        .data-table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: auto; }
+        .data-table th {
+            background: #fafbfc; text-align: left; padding: 12px 14px;
+            font-size: 12.5px; font-weight: 600; color: var(--ink-2);
+            border-bottom: 1px solid var(--line); white-space: nowrap;
+        }
+        .data-table td {
+            padding: 11px 14px; border-bottom: 1px solid #f2f4f7;
+            vertical-align: middle; color: var(--ink);
+        }
+        .data-table tbody tr:hover td { background: #fafbfc; }
+        .data-table .center { text-align: center; }
+        .data-table .nowrap { white-space: nowrap; }
+        .data-table .table-empty { text-align: center; color: var(--ink-3); padding: 48px 0; }
+
+        .thumb-mini { width: 44px; height: 44px; border-radius: 9px; object-fit: cover; background: #f3f4f6; display: block; }
+
+        .pill {
+            display: inline-block; font-size: 11.5px; line-height: 1.7;
+            padding: 1px 8px; border-radius: 6px; background: #f2f4f7;
+            color: #5f646e; white-space: nowrap;
+        }
+        .pill.success { background: #eaf6f0; color: #2f9e6e; }
+        .pill.warning { background: #fdf6e8; color: #b8860b; }
+        .pill.danger  { background: #fdecea; color: #c0392b; }
+        .pill.info    { background: #eef2f8; color: #4a6fa5; }
+
+        .link { color: var(--brand); cursor: pointer; font-size: 12.5px; margin-right: 10px; text-decoration: none; }
+        .link:hover { text-decoration: underline; }
+        .link.danger { color: #e05252; }
+
+        /* 原生下拉：不依赖浮层定位，任何缩放下都不会错位 */
+        .native-select {
+            width: 100%; height: 32px;
+            border: 1px solid #dcdfe6; border-radius: 6px;
+            padding: 0 8px; font-size: 13px; color: var(--ink);
+            background: #fff; outline: none; cursor: pointer;
+            font-family: inherit; box-sizing: border-box;
+        }
+        .native-select:focus { border-color: var(--brand); }
+        .toolbar .native-select { width: auto; min-width: 120px; }
+
+        /* flex 子项默认允许压缩，容器稍窄时按钮会被压成 0 宽而"消失" */
+        .toolbar { width: 100%; box-sizing: border-box; }
+        .toolbar > * { flex-shrink: 0; }
+
+        .native-input {
+            height: 32px; border: 1px solid #dcdfe6; border-radius: 6px;
+            padding: 0 10px; font-size: 13px; color: var(--ink);
+            outline: none; font-family: inherit; box-sizing: border-box;
+        }
+        .native-input:focus { border-color: var(--brand); }
+
+        /* 封面图选择器：点方框或按钮都能选文件 */
+        .cover-picker {
+            width: 116px; height: 90px; border: 1px dashed #cfd3da; border-radius: 10px;
+            display: grid; place-items: center; cursor: pointer; overflow: hidden;
+            position: relative; background: #fbfbfc; color: #a8adb6;
+            font-size: 12.5px; flex-shrink: 0; transition: border-color .15s, color .15s;
+        }
+        .cover-picker:hover { border-color: var(--brand); color: var(--brand); }
+        .cover-picker img { width: 100%; height: 100%; object-fit: cover; }
+        .cover-picker-mask {
+            position: absolute; inset: 0; background: rgba(0, 0, 0, .45);
+            color: #fff; display: grid; place-items: center; font-size: 12.5px;
+        }
+
+        .btn-sm {
+            height: 32px; padding: 0 14px; border-radius: 6px;
+            border: 1px solid #dcdfe6; background: #fff; color: var(--ink);
+            font-size: 13px; font-family: inherit; cursor: pointer;
+            white-space: nowrap;
+        }
+        .btn-sm:hover { border-color: var(--brand); color: var(--brand); }
+        .btn-sm.primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+        .btn-sm.primary:hover { background: #d05f38; color: #fff; }
+
+        .chk {
+            display: inline-flex; align-items: center; gap: 6px;
+            font-size: 13px; color: var(--ink-2); cursor: pointer; white-space: nowrap;
+        }
+        .chk input { width: 14px; height: 14px; accent-color: var(--brand); cursor: pointer; margin: 0; }
+
+        .tag-dot {
+            display: inline-block;
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            margin-right: 5px;
+            vertical-align: middle;
+        }
+
+        .animal-name { font-weight: 600; }
+        .animal-no { font-size: 11px; color: var(--ink-3); font-family: ui-monospace, monospace; }
+
+        .empty-box {
+            padding: 60px 0;
+            text-align: center;
+            color: var(--ink-3);
+            font-size: 13px;
+        }
+
+        /* ============ 消息列表 ============ */
+        .msg-item {
+            display: flex;
+            gap: 13px;
+            padding: 14px 4px;
+            border-bottom: 1px solid #f2f4f7;
+        }
+        .msg-item:last-child { border-bottom: none; }
+        .msg-icon {
+            width: 34px; height: 34px;
+            border-radius: 10px;
+            background: var(--brand-light);
+            display: grid; place-items: center;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+        .msg-body { flex: 1; min-width: 0; }
+        .msg-body .t { font-size: 13px; font-weight: 600; margin-bottom: 3px; display: flex; align-items: center; gap: 7px; }
+        .msg-body .c { font-size: 12.5px; color: var(--ink-2); line-height: 1.65; }
+        .msg-body .d { font-size: 11px; color: var(--ink-3); margin-top: 5px; }
+        .unread-tag {
+            background: #ff4d4f; color: #fff;
+            font-size: 10px; padding: 1px 6px;
+            border-radius: 8px; font-weight: 600;
+        }
+
+        .pagination-bar {
+            padding: 14px 18px;
+            border-top: 1px solid var(--line);
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .warn-bar {
+            background: #fff8e6;
+            border: 1px solid #fbe0a6;
+            border-radius: 10px;
+            padding: 11px 15px;
+            font-size: 12.5px;
+            color: #9a6b00;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 9px;
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+    <!-- ==================== 登录页 ==================== -->
+    <div class="login-wrap" v-if="!user">
+        <div class="login-card">
+            <div class="login-logo">
+                <div class="paw">🐾</div>
+                <h1>PawHome 救助管理平台</h1>
+            </div>
+            <p class="login-sub">城市流浪动物救助站 · 领养与物资一体化管理</p>
+
+            <el-form :model="loginForm" @submit.prevent>
+                <el-form-item>
+                    <el-input v-model="loginForm.username" size="large" placeholder="登录账号"
+                              @keyup.enter="doLogin">
+                        <template #prefix><span style="color:#b6bac1">👤</span></template>
+                    </el-input>
+                </el-form-item>
+                <el-form-item>
+                    <el-input v-model="loginForm.password" type="password" size="large"
+                              placeholder="登录密码" show-password @keyup.enter="doLogin">
+                        <template #prefix><span style="color:#b6bac1">🔒</span></template>
+                    </el-input>
+                </el-form-item>
+                <el-button type="primary" size="large" style="width:100%; margin-top:6px"
+                           :loading="loading" @click="doLogin">
+                    登 录
+                </el-button>
+            </el-form>
+
+            <div class="login-hint">
+                测试账号：<b>admin / 123456</b>（管理员）<br>
+                其他账号：<b>staff01</b>（员工）、<b>user01</b>（领养人），密码同上
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 主界面 ==================== -->
+    <div class="layout" v-else>
+        <!-- 侧边栏 -->
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="paw">🐾</div>
+                <div class="txt">
+                    <strong>PawHome</strong>
+                    <span>RESCUE PLATFORM</span>
+                </div>
+            </div>
+
+            <nav class="menu">
+                <div v-for="m in menus" :key="m.key"
+                     class="menu-item" :class="{active: page === m.key}"
+                     @click="switchPage(m.key)">
+                    <span class="ico">{{ m.icon }}</span>
+                    <span>{{ m.label }}</span>
+                    <span class="badge" v-if="m.key === 'notify' && unread > 0">{{ unread }}</span>
+                </div>
+            </nav>
+
+            <div class="side-foot">
+                微服务架构 · 8 个服务<br>
+                Spring Cloud Alibaba
+            </div>
+        </aside>
+
+        <!-- 右侧主区 -->
+        <div class="main">
+            <header class="topbar">
+                <div>
+                    <h2>{{ currentMenu.label }}</h2>
+                    <div class="desc">{{ currentMenu.desc }}</div>
+                </div>
+                <div class="spacer"></div>
+                <div class="user-chip" title="点击修改我的资料" @click="openProfile">
+                    <div class="avatar">{{ (user.realName || user.username).charAt(0) }}</div>
+                    <div class="meta">
+                        <b>{{ user.realName || user.username }}</b>
+                        <span>{{ roleText }}</span>
+                    </div>
+                </div>
+                <el-button text @click="doLogout">退出</el-button>
+            </header>
+
+            <main class="content" v-loading="pageLoading">
+
+                <!-- ============ 1. 数据看板 ============ -->
+                <div v-if="page === 'dashboard'">
+                    <div class="stat-grid">
+                        <div class="stat">
+                            <div class="label">在册动物</div>
+                            <div class="value">{{ animalStat.total || 0 }}<small>只</small></div>
+                            <div class="foot">待领养 {{ animalStat.waiting || 0 }} 只</div>
+                        </div>
+                        <div class="stat good">
+                            <div class="label">领养成功率</div>
+                            <div class="value">{{ animalStat.adoptRate || 0 }}<small>%</small></div>
+                            <div class="foot">已领养 {{ animalStat.adopted || 0 }} 只</div>
+                        </div>
+                        <div class="stat warn">
+                            <div class="label">待审核申请</div>
+                            <div class="value">{{ adoptionStat.pending || 0 }}<small>单</small></div>
+                            <div class="foot">累计 {{ adoptionStat.total || 0 }} 单</div>
+                        </div>
+                        <div class="stat" :class="{danger: supplyStat.warningCount > 0}">
+                            <div class="label">物资告急</div>
+                            <div class="value">{{ supplyStat.warningCount || 0 }}<small>项</small></div>
+                            <div class="foot">共 {{ supplyStat.totalItems || 0 }} 项物资</div>
+                        </div>
+                        <div class="stat">
+                            <div class="label">累计捐赠</div>
+                            <div class="value">¥{{ donationStat.moneySum || 0 }}</div>
+                            <div class="foot">物资 {{ donationStat.goodsCount || 0 }} 笔</div>
+                        </div>
+                        <div class="stat">
+                            <div class="label">志愿者</div>
+                            <div class="value">{{ volunteerStat.totalVolunteers || 0 }}<small>人</small></div>
+                            <div class="foot">累计服务 {{ volunteerStat.totalHours || 0 }} 小时</div>
+                        </div>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:14px; margin:16px 0;">
+                        <div class="card">
+                            <div class="card-head">
+                                <h3>物种分布</h3>
+                                <span class="sub">animal 服务实时统计</span>
+                            </div>
+                            <div class="card-body" style="padding:8px 10px 4px;">
+                                <div ref="speciesChart" style="height:230px;width:100%"></div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-head">
+                                <h3>领养转化</h3>
+                                <span class="sub">在册 → 待领养 → 已领养</span>
+                            </div>
+                            <div class="card-body" style="padding:8px 10px 4px;">
+                                <div ref="statusChart" style="height:230px;width:100%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap:14px;">
+                        <div class="card">
+                            <div class="card-head">
+                                <h3>待领养动物</h3>
+                                <span class="sub">实时来自 animal 服务</span>
+                            </div>
+                            <div class="card-body" style="padding:8px 18px;">
+                                <div class="empty-box" v-if="!adoptableList.length">暂无待领养动物</div>
+                                <div v-for="a in adoptableList" :key="a.id"
+                                     style="display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid #f2f4f7;">
+                                    <el-image :src="a.coverImage" fit="cover"
+                                              style="width:42px;height:42px;border-radius:10px;flex-shrink:0;background:#f3f4f6">
+                                        <template #error>
+                                            <div style="width:42px;height:42px;border-radius:10px;background:#fff2ec;display:grid;place-items:center;font-size:19px;">
+                                                {{ a.species === 'CAT' ? '🐱' : '🐶' }}
+                                            </div>
+                                        </template>
+                                    </el-image>
+                                    <div style="flex:1">
+                                        <div class="animal-name">{{ a.name }}
+                                            <span style="font-size:11px;font-weight:400;color:#8b9099;">{{ a.breed }}</span>
+                                        </div>
+                                        <div class="animal-no">{{ a.animalNo }} · {{ a.ageText }}</div>
+                                    </div>
+                                    <el-tag size="small" type="success" effect="plain">{{ a.healthStatusText }}</el-tag>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-head">
+                                <h3>最近领养申请</h3>
+                                <span class="sub">来自 adoption 服务</span>
+                            </div>
+                            <div class="card-body" style="padding:8px 18px;">
+                                <div class="empty-box" v-if="!recentApplies.length">暂无申请</div>
+                                <div v-for="r in recentApplies" :key="r.id"
+                                     style="display:flex; align-items:center; gap:10px; padding:11px 0; border-bottom:1px solid #f2f4f7;">
+                                    <div style="flex:1">
+                                        <div style="font-size:13px;font-weight:600;">
+                                            {{ r.applicantName }} 申请领养「{{ r.animalName }}」
+                                        </div>
+                                        <div class="animal-no">{{ r.applyNo }} · {{ r.createTime }}</div>
+                                    </div>
+                                    <el-tag size="small" :type="statusTagType(r.status)">{{ r.statusText }}</el-tag>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============ 2. 动物档案 ============ -->
+                <div v-if="page === 'animal'">
+                    <div class="toolbar">
+                        <input v-model="animalQuery.keyword" class="native-input" style="width:220px"
+                               placeholder="昵称 / 编号 / 品种" @keyup.enter="loadAnimals">
+                        <select v-model="animalQuery.species" class="native-select">
+                            <option value="">全部物种</option>
+                            <option value="DOG">犬</option>
+                            <option value="CAT">猫</option>
+                            <option value="OTHER">其他</option>
+                        </select>
+                        <select v-model="animalQuery.adoptStatus" class="native-select">
+                            <option value="">全部状态</option>
+                            <option value="WAITING">待领养</option>
+                            <option value="APPLYING">申请中</option>
+                            <option value="ADOPTED">已领养</option>
+                        </select>
+                        <button type="button" class="btn-sm primary" @click="loadAnimals">查询</button>
+                        <button type="button" class="btn-sm" @click="resetAnimalQuery">重置</button>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-head">
+                            <h3>动物档案</h3>
+                            <span class="sub">共 {{ animalTotal }} 条 · 点击图片可看大图</span>
+                            <div class="spacer"></div>
+                            <button type="button" class="btn-sm primary" @click="openAnimalDialog()">＋ 新增动物档案</button>
+                        </div>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>动物</th>
+                                    <th>品种</th>
+                                    <th>性别 / 年龄</th>
+                                    <th>健康</th>
+                                    <th>领养状态</th>
+                                    <th>救助地</th>
+                                    <th class="center">浏览</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="row in animalList" :key="row.id">
+                                    <td>
+                                        <div style="display:flex;align-items:center;gap:10px">
+                                            <a :href="row.coverImage" target="_blank" style="flex-shrink:0">
+                                                <img :src="row.coverImage" :alt="row.name" class="thumb-mini">
+                                            </a>
+                                            <div>
+                                                <div class="animal-name">{{ row.name }}</div>
+                                                <div class="animal-no">{{ row.animalNo }}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>{{ row.breed }}</td>
+                                    <td>{{ row.genderText }} · {{ row.ageText }}</td>
+                                    <td>
+                                        <span class="pill" :class="row.healthStatus === 'HEALTHY' ? 'success' : 'warning'">
+                                            {{ row.healthStatusText }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="pill" :class="statusTagType(row.adoptStatus)">{{ row.adoptStatusText }}</span>
+                                    </td>
+                                    <td>{{ row.rescueCity || '—' }}</td>
+                                    <td class="center">{{ row.viewCount }}</td>
+                                    <td class="nowrap">
+                                        <a class="link" @click="openAnimalDialog(row)">编辑</a>
+                                        <a class="link" @click="showMedical(row)">诊疗</a>
+                                        <a class="link danger" @click="removeAnimal(row)">删除</a>
+                                    </td>
+                                </tr>
+                                <tr v-if="!animalList.length">
+                                    <td colspan="8" class="table-empty">暂无数据</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div class="pagination-bar">
+                            <el-pagination background layout="total, prev, pager, next"
+                                           :total="animalTotal" :page-size="animalQuery.pageSize"
+                                           :current-page="animalQuery.pageNum"
+                                           @current-change="onAnimalPageChange" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============ 3. 领养审核 ============ -->
+                <div v-if="page === 'adoption'">
+                    <div class="toolbar">
+                        <input v-model="adoptionQuery.keyword" class="native-input" style="width:230px"
+                               placeholder="单号 / 申请人 / 动物名" @keyup.enter="loadApplies">
+                        <select v-model="adoptionQuery.status" class="native-select">
+                            <option value="">全部状态</option>
+                            <option value="PENDING">待审核</option>
+                            <option value="PASSED">已通过</option>
+                            <option value="REJECTED">已驳回</option>
+                            <option value="CANCELED">已取消</option>
+                        </select>
+                        <button type="button" class="btn-sm primary" @click="loadApplies">查询</button>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-head">
+                            <h3>领养申请</h3>
+                            <span class="sub">共 {{ adoptionTotal }} 条</span>
+                            <div class="spacer"></div>
+                            <button type="button" class="btn-sm primary" @click="openApplyDialog">＋ 提交领养申请</button>
+                        </div>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>申请单号</th>
+                                    <th>领养动物</th>
+                                    <th>申请人</th>
+                                    <th>联系电话</th>
+                                    <th>城市</th>
+                                    <th class="center">养宠经验</th>
+                                    <th>状态</th>
+                                    <th>申请时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="row in applies" :key="row.id">
+                                    <td class="nowrap">{{ row.applyNo }}</td>
+                                    <td>{{ row.animalName }}</td>
+                                    <td>{{ row.applicantName }}</td>
+                                    <td class="nowrap">{{ row.phone }}</td>
+                                    <td>{{ row.city || '—' }}</td>
+                                    <td class="center">{{ row.hasPetExperience ? '有' : '无' }}</td>
+                                    <td><span class="pill" :class="statusTagType(row.status)">{{ row.statusText }}</span></td>
+                                    <td class="nowrap">{{ row.createTime }}</td>
+                                    <td class="nowrap">
+                                        <a v-if="row.status === 'PENDING'" class="link" @click="openAuditDialog(row)">审核</a>
+                                        <a v-if="row.status === 'PASSED'" class="link" @click="openVisitDialog(row)">回访</a>
+                                        <span v-if="row.status !== 'PENDING' && row.status !== 'PASSED'"
+                                              style="color:#c0c4cc;font-size:12.5px">已处理</span>
+                                    </td>
+                                </tr>
+                                <tr v-if="!applies.length">
+                                    <td colspan="9" class="table-empty">暂无申请</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div class="pagination-bar">
+                            <el-pagination background layout="total, prev, pager, next"
+                                           :total="adoptionTotal" :page-size="adoptionQuery.pageSize"
+                                           :current-page="adoptionQuery.pageNum"
+                                           @current-change="p => { adoptionQuery.pageNum = p; loadApplies(); }" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============ 4. 物资库存 ============ -->
+                <div v-if="page === 'supply'">
+                    <div class="warn-bar" v-if="warningItems.length">
+                        ⚠️ 有 <b style="margin:0 4px">{{ warningItems.length }}</b> 项物资低于预警值：
+                        <span style="font-weight:600">{{ warningItems.map(w => w.name).join('、') }}</span>
+                    </div>
+
+                    <div class="toolbar">
+                        <input v-model="supplyQuery.keyword" class="native-input" style="width:200px"
+                               placeholder="物资名称" @keyup.enter="loadSupplies">
+                        <button type="button" class="btn-sm primary" @click="loadSupplies">查询</button>
+                        <label class="chk">
+                            <input type="checkbox" v-model="supplyQuery.onlyWarning" @change="loadSupplies"> 只看告急
+                        </label>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-head">
+                            <h3>物资库存</h3>
+                            <span class="sub">库存低于预警值会标红</span>
+                            <div class="spacer"></div>
+                            <button type="button" class="btn-sm primary" @click="openItemDialog()">＋ 新增物资</button>
+                            <button type="button" class="btn-sm primary" @click="openStockDialog('IN')">＋ 入库</button>
+                            <button type="button" class="btn-sm" @click="openStockDialog('OUT')">出库</button>
+                        </div>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>编号</th>
+                                    <th>物资名称</th>
+                                    <th>分类</th>
+                                    <th>规格</th>
+                                    <th>当前库存</th>
+                                    <th class="center">预警值</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="row in supplies" :key="row.id">
+                                    <td class="nowrap">{{ row.itemNo }}</td>
+                                    <td>{{ row.name }}</td>
+                                    <td>{{ row.categoryName }}</td>
+                                    <td>{{ row.spec }}</td>
+                                    <td>
+                                        <b :style="{ color: row.warning ? '#e05252' : 'var(--ink)' }">
+                                            {{ row.stock }} {{ row.unit }}
+                                        </b>
+                                    </td>
+                                    <td class="center">{{ row.warnStock }}</td>
+                                    <td>
+                                        <span class="pill" :class="row.warning ? 'danger' : 'success'">
+                                            {{ row.warning ? '库存告急' : '充足' }}
+                                        </span>
+                                    </td>
+                                    <td class="nowrap">
+                                        <a class="link" @click="openItemDialog(row)">编辑</a>
+                                        <a class="link" @click="openStockDialog('IN', row)">入库</a>
+                                        <a class="link" @click="openStockDialog('OUT', row)">出库</a>
+                                    </td>
+                                </tr>
+                                <tr v-if="!supplies.length">
+                                    <td colspan="8" class="table-empty">暂无物资</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div class="pagination-bar">
+                            <el-pagination background layout="total, prev, pager, next"
+                                           :total="supplyTotal" :page-size="10"
+                                           :current-page="supplyQuery.pageNum"
+                                           @current-change="p => { supplyQuery.pageNum = p; loadSupplies(); }" />
+                        </div>
+                    </div>
+
+                    <div class="card" style="margin-top:14px">
+                        <div class="card-head">
+                            <h3>出入库流水</h3>
+                            <span class="sub">只增不改，是库存变更的唯一凭证</span>
+                            <div class="spacer"></div>
+                            <select v-model="recordQuery.itemId" class="native-select" @change="recordQuery.pageNum = 1; loadRecords()">
+                                <option :value="null">全部物资</option>
+                                <option v-for="x in allSupplies" :key="x.id" :value="x.id">{{ x.name }}</option>
+                            </select>
+                        </div>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>时间</th>
+                                    <th>流水号</th>
+                                    <th>物资</th>
+                                    <th>类型</th>
+                                    <th class="center">数量</th>
+                                    <th class="center">变动前 → 变动后</th>
+                                    <th>来源</th>
+                                    <th>操作人</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="r in records" :key="r.id">
+                                    <td class="nowrap">{{ r.createTime }}</td>
+                                    <td class="nowrap">{{ r.recordNo }}</td>
+                                    <td>{{ r.itemName }}</td>
+                                    <td>
+                                        <span class="pill" :class="r.type === 'IN' ? 'success' : 'warning'">
+                                            {{ r.type === 'IN' ? '入库' : '出库' }}
+                                        </span>
+                                    </td>
+                                    <td class="center">
+                                        <b :style="{ color: r.type === 'IN' ? '#2f9e6e' : '#c0392b' }">
+                                            {{ r.type === 'IN' ? '+' : '-' }}{{ r.quantity }}
+                                        </b>
+                                    </td>
+                                    <td class="center nowrap">{{ r.beforeStock }} → {{ r.afterStock }}</td>
+                                    <td>{{ recordSourceText(r.sourceType) }}</td>
+                                    <td>{{ r.operatorName || '系统' }}</td>
+                                </tr>
+                                <tr v-if="!records.length">
+                                    <td colspan="8" class="table-empty">暂无出入库记录</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div class="pagination-bar">
+                            <el-pagination background layout="total, prev, pager, next"
+                                           :total="recordTotal" :page-size="8"
+                                           :current-page="recordQuery.pageNum"
+                                           @current-change="p => { recordQuery.pageNum = p; loadRecords(); }" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============ 5. 捐赠管理 ============ -->
+                <div v-if="page === 'donation'">
+                    <div class="toolbar">
+                        <input v-model="donationQuery.keyword" class="native-input" style="width:200px"
+                               placeholder="单号 / 捐赠人" @keyup.enter="loadDonations">
+                        <select v-model="donationQuery.type" class="native-select">
+                            <option value="">全部类型</option>
+                            <option value="MONEY">资金</option>
+                            <option value="GOODS">物资</option>
+                        </select>
+                        <button type="button" class="btn-sm primary" @click="loadDonations">查询</button>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-head">
+                            <h3>捐赠记录</h3>
+                            <span class="sub">资金捐赠支付后自动入账，物资捐赠支付后自动入库</span>
+                            <div class="spacer"></div>
+                            <button type="button" class="btn-sm primary" @click="openDonationDialog">＋ 登记捐赠</button>
+                        </div>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>捐赠单号</th>
+                                    <th>捐赠人</th>
+                                    <th>类型</th>
+                                    <th>金额 / 物资</th>
+                                    <th>状态</th>
+                                    <th>登记时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="row in donations" :key="row.id">
+                                    <td class="nowrap">{{ row.donationNo }}</td>
+                                    <td>{{ row.donorName }}</td>
+                                    <td>
+                                        <span class="pill" :class="row.type === 'MONEY' ? 'warning' : 'success'">
+                                            {{ row.type === 'MONEY' ? '资金' : '物资' }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span v-if="row.type === 'MONEY'">¥{{ row.amount }}</span>
+                                        <span v-else>{{ row.itemDesc }} × {{ row.quantity }}</span>
+                                    </td>
+                                    <td><span class="pill" :class="statusTagType(row.status)">{{ donationStatusText(row.status) }}</span></td>
+                                    <td class="nowrap">{{ row.createTime }}</td>
+                                    <td class="nowrap">
+                                        <template v-if="row.status === 'INIT'">
+                                            <a class="link" @click="doPay(row)">支付</a>
+                                            <a class="link danger" @click="doCancelDonation(row)">取消</a>
+                                        </template>
+                                        <span v-else style="color:#c0c4cc;font-size:12.5px">
+                                            {{ row.status === 'CANCELED' ? '已取消' : '已完成' }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr v-if="!donations.length">
+                                    <td colspan="7" class="table-empty">暂无捐赠记录</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div class="pagination-bar">
+                            <el-pagination background layout="total, prev, pager, next"
+                                           :total="donationTotal" :page-size="10"
+                                           :current-page="donationQuery.pageNum"
+                                           @current-change="p => { donationQuery.pageNum = p; loadDonations(); }" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============ 6. 志愿服务 ============ -->
+                <div v-if="page === 'volunteer'">
+                    <div class="stat-grid" style="grid-template-columns:repeat(4,1fr)">
+                        <div class="stat">
+                            <div class="label">在册志愿者</div>
+                            <div class="value">{{ volunteerStat.totalVolunteers || 0 }}<small>人</small></div>
+                        </div>
+                        <div class="stat good">
+                            <div class="label">累计服务时长</div>
+                            <div class="value">{{ volunteerStat.totalHours || 0 }}<small>h</small></div>
+                        </div>
+                        <div class="stat">
+                            <div class="label">今日排班</div>
+                            <div class="value">{{ volunteerStat.todayShifts || 0 }}<small>班</small></div>
+                        </div>
+                        <div class="stat">
+                            <div class="label">资深志愿者</div>
+                            <div class="value">{{ (volunteerStat.byLevel || {}).SENIOR || 0 }}<small>人</small></div>
+                        </div>
+                    </div>
+
+                    <div class="card" style="margin-bottom:14px">
+                        <div class="card-head">
+                            <h3>志愿者档案</h3>
+                            <div class="spacer"></div>
+                            <button type="button" class="btn-sm primary" @click="openVolunteerDialog">＋ 登记志愿者</button>
+                        </div>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>姓名</th>
+                                    <th>手机号</th>
+                                    <th>技能</th>
+                                    <th>加入日期</th>
+                                    <th class="center">累计时长</th>
+                                    <th>等级</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="row in volunteers" :key="row.id">
+                                    <td>{{ row.name }}</td>
+                                    <td class="nowrap">{{ row.phone }}</td>
+                                    <td>{{ row.skills }}</td>
+                                    <td class="nowrap">{{ row.joinDate }}</td>
+                                    <td class="center"><b>{{ row.totalHours }}</b> h</td>
+                                    <td><span class="pill" :class="levelTagType(row.level)">{{ levelText(row.level) }}</span></td>
+                                </tr>
+                                <tr v-if="!volunteers.length">
+                                    <td colspan="6" class="table-empty">暂无志愿者</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-head">
+                            <h3>排班与打卡</h3>
+                            <div class="spacer"></div>
+                            <button type="button" class="btn-sm primary" @click="openShiftDialog">＋ 新增排班</button>
+                        </div>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>志愿者</th>
+                                    <th>日期</th>
+                                    <th>时段</th>
+                                    <th>工作内容</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="row in shifts" :key="row.id">
+                                    <td>{{ row.volunteerName }}</td>
+                                    <td class="nowrap">{{ row.shiftDate }}</td>
+                                    <td class="nowrap">{{ row.startTime }} - {{ row.endTime }}</td>
+                                    <td>{{ workTypeText(row.workType) }}</td>
+                                    <td>
+                                        <span class="pill" :class="row.status === 'FINISHED' ? 'success' : 'info'">
+                                            {{ row.status === 'FINISHED' ? '已完成' : (row.status === 'PLANNED' ? '已排班' : '已取消') }}
+                                        </span>
+                                    </td>
+                                    <td class="nowrap">
+                                        <template v-if="row.status === 'PLANNED'">
+                                            <a class="link" @click="doCheckin(row)">签到</a>
+                                            <a class="link" @click="doCheckout(row)">签退</a>
+                                        </template>
+                                        <span v-else style="color:#c0c4cc;font-size:12.5px">—</span>
+                                    </td>
+                                </tr>
+                                <tr v-if="!shifts.length">
+                                    <td colspan="6" class="table-empty">暂无排班</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="card" style="margin-top:14px">
+                        <div class="card-head">
+                            <h3>打卡记录</h3>
+                            <span class="sub">签退时自动算时长、累加工时并升级等级</span>
+                            <div class="spacer"></div>
+                            <select v-model="checkinFilter" class="native-select" @change="loadCheckins">
+                                <option :value="null">全部志愿者</option>
+                                <option v-for="v in volunteers" :key="v.id" :value="v.id">{{ v.name }}</option>
+                            </select>
+                        </div>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>志愿者</th>
+                                    <th>签到时间</th>
+                                    <th>签退时间</th>
+                                    <th class="center">服务时长</th>
+                                    <th>备注</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="c in checkins" :key="c.id">
+                                    <td>{{ volunteerName(c.volunteerId) }}</td>
+                                    <td class="nowrap">{{ c.checkinTime }}</td>
+                                    <td class="nowrap">{{ c.checkoutTime || '未签退' }}</td>
+                                    <td class="center">
+                                        <b v-if="c.hours">{{ c.hours }} h</b>
+                                        <span v-else style="color:#c0c4cc">—</span>
+                                    </td>
+                                    <td>{{ c.remark || '—' }}</td>
+                                </tr>
+                                <tr v-if="!checkins.length">
+                                    <td colspan="5" class="table-empty">暂无打卡记录</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- ============ 7. 消息中心 ============ -->
+                <div v-if="page === 'notify'">
+                    <div class="toolbar">
+                        <el-radio-group v-model="notifyFilter" @change="loadMessages">
+                            <el-radio-button :value="null">全部</el-radio-button>
+                            <el-radio-button :value="0">未读</el-radio-button>
+                            <el-radio-button :value="1">已读</el-radio-button>
+                        </el-radio-group>
+                        <div class="spacer"></div>
+                        <button type="button" class="btn-sm" @click="markAllRead">全部标为已读</button>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-body" style="padding:6px 18px;">
+                            <div class="empty-box" v-if="!messages.length">暂无消息</div>
+                            <div class="msg-item" v-for="m in messages" :key="m.id">
+                                <div class="msg-icon">{{ msgIcon(m.type) }}</div>
+                                <div class="msg-body">
+                                    <div class="t">
+                                        {{ m.title }}
+                                        <span class="unread-tag" v-if="!m.readFlag">未读</span>
+                                    </div>
+                                    <div class="c">{{ m.content }}</div>
+                                    <div class="d">{{ m.createTime }} · {{ m.receiverName }}</div>
+                                </div>
+                                <el-button v-if="!m.readFlag" link type="primary" size="small"
+                                           @click="markRead(m)">标为已读</el-button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============ 8. 用户管理 ============ -->
+                <div v-if="page === 'user'">
+                    <div class="stat-grid" style="grid-template-columns:repeat(4,1fr)">
+                        <div class="stat">
+                            <div class="label">账号总数</div>
+                            <div class="value">{{ userStat.total || 0 }}<small>个</small></div>
+                        </div>
+                        <div class="stat">
+                            <div class="label">管理员</div>
+                            <div class="value">{{ userStat.admins || 0 }}<small>个</small></div>
+                        </div>
+                        <div class="stat good">
+                            <div class="label">领养人</div>
+                            <div class="value">{{ userStat.adopters || 0 }}<small>个</small></div>
+                        </div>
+                        <div class="stat">
+                            <div class="label">已停用</div>
+                            <div class="value">{{ userStat.disabled || 0 }}<small>个</small></div>
+                        </div>
+                    </div>
+
+                    <div class="toolbar">
+                        <input v-model="userQuery.keyword" class="native-input" style="width:220px"
+                               placeholder="账号 / 姓名 / 手机号" @keyup.enter="loadUsers">
+                        <select v-model="userQuery.role" class="native-select">
+                            <option value="">全部角色</option>
+                            <option value="ADMIN">管理员</option>
+                            <option value="STAFF">救助站员工</option>
+                            <option value="VOLUNTEER">志愿者</option>
+                            <option value="ADOPTER">领养人</option>
+                        </select>
+                        <button type="button" class="btn-sm primary" @click="userQuery.pageNum = 1; loadUsers()">查询</button>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-head">
+                            <h3>账号列表</h3>
+                            <span class="sub">停用后该账号无法登录，已有数据保留</span>
+                            <div class="spacer"></div>
+                            <button type="button" class="btn-sm" @click="loadUsers">刷新</button>
+                        </div>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>账号</th>
+                                    <th>姓名</th>
+                                    <th>手机号</th>
+                                    <th>角色</th>
+                                    <th>状态</th>
+                                    <th>最后登录</th>
+                                    <th>注册时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="row in users" :key="row.id">
+                                    <td><b>{{ row.username }}</b></td>
+                                    <td>{{ row.realName || '—' }}</td>
+                                    <td class="nowrap">{{ row.phone || '—' }}</td>
+                                    <td><span class="pill" :class="rolePill(row.role)">{{ roleLabel(row.role) }}</span></td>
+                                    <td>
+                                        <span class="pill" :class="row.status === 1 ? 'success' : 'danger'">
+                                            {{ row.status === 1 ? '正常' : '已停用' }}
+                                        </span>
+                                    </td>
+                                    <td class="nowrap">{{ row.lastLoginTime || '从未登录' }}</td>
+                                    <td class="nowrap">{{ row.createTime }}</td>
+                                    <td class="nowrap">
+                                        <a class="link" @click="toggleUserStatus(row)">
+                                            {{ row.status === 1 ? '停用' : '启用' }}
+                                        </a>
+                                        <a class="link" @click="resetUserPwd(row)">重置密码</a>
+                                    </td>
+                                </tr>
+                                <tr v-if="!users.length">
+                                    <td colspan="8" class="table-empty">没有符合条件的账号</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div class="pagination-bar">
+                            <el-pagination background layout="total, prev, pager, next"
+                                           :total="userTotal" :page-size="userQuery.pageSize"
+                                           :current-page="userQuery.pageNum"
+                                           @current-change="p => { userQuery.pageNum = p; loadUsers(); }" />
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- ==================== 弹窗：动物档案 ==================== -->
+    <el-dialog v-model="animalDialog.visible" :title="animalDialog.form.id ? '编辑动物档案' : '新增动物档案'"
+               width="620px" destroy-on-close>
+        <el-form :model="animalDialog.form" label-width="90px">
+            <el-row :gutter="12">
+                <el-col :span="12">
+                    <el-form-item label="昵称" required>
+                        <el-input v-model="animalDialog.form.name" placeholder="如：豆豆" />
+                    </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                    <el-form-item label="物种" required>
+                        <select v-model="animalDialog.form.species" class="native-select">
+                            <option value="DOG">犬</option>
+                            <option value="CAT">猫</option>
+                            <option value="OTHER">其他</option>
+                        </select>
+                    </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                    <el-form-item label="品种">
+                        <el-input v-model="animalDialog.form.breed" placeholder="如：中华田园犬" />
+                    </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                    <el-form-item label="性别">
+                        <el-radio-group v-model="animalDialog.form.gender">
+                            <el-radio value="M">公</el-radio>
+                            <el-radio value="F">母</el-radio>
+                        </el-radio-group>
+                    </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                    <el-form-item label="月龄" required>
+                        <el-input-number v-model="animalDialog.form.ageMonth" :min="0" :max="300" style="width:100%" />
+                    </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                    <el-form-item label="体重(kg)">
+                        <el-input-number v-model="animalDialog.form.weight" :min="0" :precision="2" :step="0.5" style="width:100%" />
+                    </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                    <el-form-item label="健康状态">
+                        <select v-model="animalDialog.form.healthStatus" class="native-select">
+                            <option value="HEALTHY">健康</option>
+                            <option value="TREATING">治疗中</option>
+                            <option value="RECOVERING">康复中</option>
+                            <option value="DISABLED">残疾</option>
+                        </select>
+                    </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                    <el-form-item label="救助日期">
+                        <el-date-picker v-model="animalDialog.form.rescueDate" type="date"
+                                        value-format="YYYY-MM-DD" style="width:100%" />
+                    </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                    <el-form-item label="救助城市">
+                        <el-input v-model="animalDialog.form.rescueCity" />
+                    </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                    <el-form-item label="救助来源">
+                        <el-input v-model="animalDialog.form.rescueSource" placeholder="如：路边救助" />
+                    </el-form-item>
+                </el-col>
+                <el-col :span="24">
+                    <el-form-item label="封面图（可选）">
+                        <div style="width:100%;display:flex;gap:14px;align-items:flex-start">
+                            <div class="cover-picker" @click="pickCover">
+                                <img v-if="animalDialog.form.coverImage" :src="animalDialog.form.coverImage" alt="封面预览">
+                                <span v-else>＋ 选择图片</span>
+                                <div v-if="uploading" class="cover-picker-mask">上传中…</div>
+                            </div>
+                            <div style="flex:1;min-width:0">
+                                <input ref="coverInput" type="file" accept="image/png,image/jpeg,image/gif"
+                                       style="display:none" @change="onCoverPick">
+                                <button type="button" class="btn-sm primary" :disabled="uploading" @click="pickCover">
+                                    从电脑选择图片
+                                </button>
+                                <button v-if="animalDialog.form.coverImage" type="button" class="btn-sm"
+                                        style="margin-left:8px" @click="animalDialog.form.coverImage = ''">清除</button>
+                                <div style="font-size:12px;color:#8b9099;margin-top:9px;line-height:1.7">
+                                    jpg / png / gif，单张不超过 5MB；不选则按物种自动使用默认图
+                                </div>
+                                <input v-model="animalDialog.form.coverImage" class="native-input"
+                                       style="margin-top:8px" placeholder="也可以直接填写已有图片地址">
+                            </div>
+                        </div>
+                    </el-form-item>
+                </el-col>
+                <el-col :span="24">
+                    <el-form-item label="情况描述">
+                        <el-input v-model="animalDialog.form.description" type="textarea" :rows="3"
+                                  placeholder="性格特点、注意事项等" />
+                    </el-form-item>
+                </el-col>
+            </el-row>
+        </el-form>
+        <template #footer>
+            <el-button @click="animalDialog.visible = false">取消</el-button>
+            <el-button type="primary" :loading="saving" @click="saveAnimal">保存</el-button>
+        </template>
+    </el-dialog>
+
+    <!-- ==================== 弹窗：诊疗记录 ==================== -->
+    <el-dialog v-model="medicalDialog.visible" :title="'诊疗记录 · ' + medicalDialog.animalName" width="640px">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>日期</th>
+                    <th>类型</th>
+                    <th>记录</th>
+                    <th>兽医</th>
+                    <th>费用</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="row in medicalDialog.list" :key="row.id">
+                    <td class="nowrap">{{ row.recordDate }}</td>
+                    <td>{{ medicalTypeText(row.recordType) }}</td>
+                    <td>{{ row.title }}</td>
+                    <td>{{ row.vetName }}</td>
+                    <td class="nowrap">¥{{ row.cost }}</td>
+                </tr>
+                <tr v-if="!medicalDialog.list.length">
+                    <td colspan="5" class="table-empty">暂无诊疗记录</td>
+                </tr>
+            </tbody>
+        </table>
+        <template #footer>
+            <button type="button" class="btn-sm" @click="medicalDialog.visible = false">关闭</button>
+            <button type="button" class="btn-sm primary" @click="openMedicalForm">＋ 新增诊疗记录</button>
+        </template>
+    </el-dialog>
+
+    <!-- 新增诊疗记录 -->
+    <el-dialog v-model="medicalForm.visible" title="新增诊疗记录" width="520px">
+        <el-form label-position="top" @submit.prevent>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 14px">
+                <el-form-item label="日期">
+                    <input type="date" v-model="medicalForm.form.recordDate" class="native-input" style="width:100%">
+                </el-form-item>
+                <el-form-item label="类型">
+                    <select v-model="medicalForm.form.recordType" class="native-select">
+                        <option value="VACCINE">疫苗</option>
+                        <option value="TREATMENT">治疗</option>
+                        <option value="STERILIZE">绝育</option>
+                        <option value="CHECK">体检</option>
+                    </select>
+                </el-form-item>
+            </div>
+            <el-form-item label="记录标题">
+                <input v-model="medicalForm.form.title" class="native-input" style="width:100%"
+                       placeholder="如：狂犬疫苗第一针 / 后腿软组织修复">
+            </el-form-item>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 14px">
+                <el-form-item label="兽医">
+                    <input v-model="medicalForm.form.vetName" class="native-input" style="width:100%" placeholder="如：陈医生">
+                </el-form-item>
+                <el-form-item label="费用（元）">
+                    <input type="number" v-model.number="medicalForm.form.cost" class="native-input" style="width:100%" placeholder="0">
+                </el-form-item>
+            </div>
+            <el-form-item label="备注">
+                <input v-model="medicalForm.form.remark" class="native-input" style="width:100%" placeholder="选填，如用药情况">
+            </el-form-item>
+        </el-form>
+        <template #footer>
+            <button type="button" class="btn-sm" @click="medicalForm.visible = false">取消</button>
+            <button type="button" class="btn-sm primary" @click="saveMedical">保存</button>
+        </template>
+    </el-dialog>
+
+    <!-- ==================== 弹窗：提交领养申请 ==================== -->
+    <el-dialog v-model="applyDialog.visible" title="提交领养申请" width="560px" destroy-on-close>
+        <el-form :model="applyDialog.form" label-width="90px">
+            <el-form-item label="领养动物" required>
+                <select v-model="applyDialog.form.animalId" class="native-select">
+                    <option :value="null" disabled>请选择待领养动物</option>
+                    <option v-for="a in adoptableList" :key="a.id" :value="a.id">{{ a.name }}（{{ a.breed || a.speciesText }} · {{ a.ageText }}）</option>
+                </select>
+            </el-form-item>
+            <el-form-item label="姓名" required>
+                <el-input v-model="applyDialog.form.applicantName" />
+            </el-form-item>
+            <el-form-item label="手机号" required>
+                <el-input v-model="applyDialog.form.phone" />
+            </el-form-item>
+            <el-form-item label="城市">
+                <el-input v-model="applyDialog.form.city" />
+            </el-form-item>
+            <el-form-item label="居住地址" required>
+                <el-input v-model="applyDialog.form.address" />
+            </el-form-item>
+            <el-form-item label="职业">
+                <el-input v-model="applyDialog.form.occupation" />
+            </el-form-item>
+            <el-form-item label="养宠经验">
+                <el-switch v-model="applyDialog.form.hasPetExperience" :active-value="1" :inactive-value="0" />
+            </el-form-item>
+            <el-form-item label="领养理由" required>
+                <el-input v-model="applyDialog.form.reason" type="textarea" :rows="3" />
+            </el-form-item>
+        </el-form>
+        <template #footer>
+            <el-button @click="applyDialog.visible = false">取消</el-button>
+            <el-button type="primary" :loading="saving" @click="submitApply">提交申请</el-button>
+        </template>
+    </el-dialog>
+
+    <!-- ==================== 弹窗：审核 ==================== -->
+    <el-dialog v-model="auditDialog.visible" title="审核领养申请" width="480px">
+        <div class="card" style="margin-bottom:16px;background:#fafbfc">
+            <div class="card-body" style="padding:14px 16px">
+                <div style="font-size:13px;line-height:2">
+                    <div><span style="color:#8b9099">申请单号：</span>{{ auditDialog.row.applyNo }}</div>
+                    <div><span style="color:#8b9099">领养动物：</span><b>{{ auditDialog.row.animalName }}</b></div>
+                    <div><span style="color:#8b9099">申请人：</span>{{ auditDialog.row.applicantName }} · {{ auditDialog.row.phone }}</div>
+                    <div><span style="color:#8b9099">领养理由：</span>{{ auditDialog.row.reason }}</div>
+                </div>
+            </div>
+        </div>
+        <el-form label-width="80px">
+            <el-form-item label="审核结果">
+                <el-radio-group v-model="auditDialog.pass">
+                    <el-radio :value="true">通过</el-radio>
+                    <el-radio :value="false">驳回</el-radio>
+                </el-radio-group>
+            </el-form-item>
+            <el-form-item label="审核意见">
+                <el-input v-model="auditDialog.remark" type="textarea" :rows="3"
+                          :placeholder="auditDialog.pass ? '选填' : '驳回时必须填写原因'" />
+            </el-form-item>
+        </el-form>
+        <template #footer>
+            <el-button @click="auditDialog.visible = false">取消</el-button>
+            <el-button type="primary" :loading="saving" @click="submitAudit">提交审核</el-button>
+        </template>
+    </el-dialog>
+
+    <!-- ==================== 弹窗：出入库 ==================== -->
+    <el-dialog v-model="stockDialog.visible" :title="stockDialog.direction === 'IN' ? '物资入库' : '物资出库'" width="460px">
+        <el-form label-width="90px">
+            <el-form-item label="物资" required>
+                <select v-model="stockDialog.form.itemId" class="native-select">
+                    <option :value="null" disabled>选择物资</option>
+                    <option v-for="x in supplies" :key="x.id" :value="x.id">{{ x.name }}（库存 {{ x.stock }} {{ x.unit }}）</option>
+                </select>
+            </el-form-item>
+            <el-form-item label="数量" required>
+                <el-input-number v-model="stockDialog.form.quantity" :min="1" :max="1000" style="width:100%" />
+            </el-form-item>
+            <el-form-item label="备注">
+                <el-input v-model="stockDialog.form.remark" type="textarea" :rows="2" />
+            </el-form-item>
+        </el-form>
+        <template #footer>
+            <el-button @click="stockDialog.visible = false">取消</el-button>
+            <el-button type="primary" :loading="saving" @click="submitStock">确认{{ stockDialog.direction === 'IN' ? '入库' : '出库' }}</el-button>
+        </template>
+    </el-dialog>
+
+    <!-- ==================== 弹窗：物资档案 ==================== -->
+    <el-dialog v-model="itemDialog.visible" :title="itemDialog.form.id ? '编辑物资' : '新增物资'"
+               width="520px" destroy-on-close>
+        <el-form label-width="95px">
+            <el-form-item label="物资名称" required>
+                <el-input v-model="itemDialog.form.name" placeholder="如 幼猫粮" />
+            </el-form-item>
+            <el-form-item label="分类" required>
+                <select v-model="itemDialog.form.categoryId" class="native-select" @change="onCategoryChange">
+                    <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
+                </select>
+            </el-form-item>
+            <el-form-item label="计量单位">
+                <el-input v-model="itemDialog.form.unit" placeholder="袋 / 包 / 瓶 / 件" />
+            </el-form-item>
+            <el-form-item label="规格">
+                <el-input v-model="itemDialog.form.spec" placeholder="如 2kg/袋" />
+            </el-form-item>
+            <el-form-item label="预警值">
+                <el-input-number v-model="itemDialog.form.warnStock" :min="0" style="width:100%" />
+            </el-form-item>
+            <el-form-item label="参考单价">
+                <el-input-number v-model="itemDialog.form.price" :min="0" :precision="2" style="width:100%" />
+            </el-form-item>
+            <el-form-item label="初始库存" v-if="!itemDialog.form.id">
+                <el-input-number v-model="itemDialog.form.stock" :min="0" style="width:100%" />
+            </el-form-item>
+            <div v-else style="font-size:12px;color:#8b9099;padding-left:95px">
+                库存数量请通过「入库 / 出库」调整，这样流水与台账才对得上
+            </div>
+        </el-form>
+        <template #footer>
+            <el-button @click="itemDialog.visible = false">取消</el-button>
+            <el-button type="primary" :loading="saving" @click="submitItem">保存</el-button>
+        </template>
+    </el-dialog>
+
+    <!-- ==================== 弹窗：回访记录 ==================== -->
+    <el-dialog v-model="visitDialog.visible" :title="'回访记录 · ' + visitDialog.animalName" width="700px">
+        <div style="font-size:12.5px;color:#8b9099;margin-bottom:12px">
+            申请人：{{ visitDialog.applicantName || '—' }}　领养后按周期回访，记录生活与健康情况
+        </div>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th class="center">次序</th>
+                    <th>回访日期</th>
+                    <th>回访人</th>
+                    <th>动物健康</th>
+                    <th>生活环境</th>
+                    <th>结论</th>
+                    <th>备注</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="v in visitDialog.list" :key="v.id">
+                    <td class="center">第 {{ v.visitNo }} 次</td>
+                    <td class="nowrap">{{ v.visitDate }}</td>
+                    <td>{{ v.visitor || '—' }}</td>
+                    <td>{{ healthText(v.animalHealth) }}</td>
+                    <td>{{ healthText(v.livingEnv) }}</td>
+                    <td><span class="pill" :class="visitPill(v.result)">{{ visitResultText(v.result) }}</span></td>
+                    <td>{{ v.remark || '—' }}</td>
+                </tr>
+                <tr v-if="!visitDialog.list.length">
+                    <td colspan="7" class="table-empty">还没有回访记录，点右下角新增一条</td>
+                </tr>
+            </tbody>
+        </table>
+        <template #footer>
+            <el-button @click="visitDialog.visible = false">关闭</el-button>
+            <button type="button" class="btn-sm primary" @click="openVisitForm">＋ 新增回访记录</button>
+        </template>
+    </el-dialog>
+
+    <!-- ==================== 弹窗：新增回访 ==================== -->
+    <el-dialog v-model="visitFormDialog.visible" title="新增回访记录" width="520px"
+               append-to-body destroy-on-close>
+        <el-form label-width="95px">
+            <el-form-item label="回访日期" required>
+                <input type="date" v-model="visitFormDialog.form.visitDate" class="native-input" style="width:100%">
+            </el-form-item>
+            <el-form-item label="回访人">
+                <el-input v-model="visitFormDialog.form.visitor" />
+            </el-form-item>
+            <el-form-item label="动物健康">
+                <select v-model="visitFormDialog.form.animalHealth" class="native-select">
+                    <option value="GOOD">良好</option>
+                    <option value="NORMAL">一般</option>
+                    <option value="POOR">较差</option>
+                </select>
+            </el-form-item>
+            <el-form-item label="生活环境">
+                <select v-model="visitFormDialog.form.livingEnv" class="native-select">
+                    <option value="GOOD">良好</option>
+                    <option value="NORMAL">一般</option>
+                    <option value="POOR">较差</option>
+                </select>
+            </el-form-item>
+            <el-form-item label="回访结论" required>
+                <select v-model="visitFormDialog.form.result" class="native-select">
+                    <option value="PASS">通过</option>
+                    <option value="WARN">需持续关注</option>
+                    <option value="FAIL">不合格</option>
+                </select>
+            </el-form-item>
+            <el-form-item label="备注">
+                <el-input v-model="visitFormDialog.form.remark" type="textarea" :rows="3"
+                          placeholder="居住条件、喂养情况、建议等" />
+            </el-form-item>
+        </el-form>
+        <template #footer>
+            <el-button @click="visitFormDialog.visible = false">取消</el-button>
+            <el-button type="primary" :loading="saving" @click="submitVisit">保存</el-button>
+        </template>
+    </el-dialog>
+
+    <!-- ==================== 弹窗：捐赠登记 ==================== -->
+    <el-dialog v-model="donationDialog.visible" title="登记捐赠" width="520px" destroy-on-close>
+        <el-form :model="donationDialog.form" label-width="95px">
+            <el-form-item label="捐赠类型" required>
+                <el-radio-group v-model="donationDialog.form.type">
+                    <el-radio value="MONEY">资金捐赠</el-radio>
+                    <el-radio value="GOODS">物资捐赠</el-radio>
+                </el-radio-group>
+            </el-form-item>
+            <el-form-item label="捐赠人" required>
+                <el-input v-model="donationDialog.form.donorName" placeholder="姓名或企业名称" />
+            </el-form-item>
+            <el-form-item label="联系电话">
+                <el-input v-model="donationDialog.form.donorPhone" />
+            </el-form-item>
+            <template v-if="donationDialog.form.type === 'MONEY'">
+                <el-form-item label="捐赠金额" required>
+                    <el-input-number v-model="donationDialog.form.amount" :min="1" :precision="2" style="width:100%" />
+                </el-form-item>
+            </template>
+            <template v-else>
+                <el-form-item label="捐赠物资" required>
+                    <select v-model="donationDialog.form.supplyItemId" class="native-select">
+                        <option :value="null" disabled>选择对应物资</option>
+                        <option v-for="x in supplies" :key="x.id" :value="x.id">{{ x.name }}（{{ x.unit }}）</option>
+                    </select>
+                </el-form-item>
+                <el-form-item label="物资描述">
+                    <el-input v-model="donationDialog.form.itemDesc" placeholder="如：成犬狗粮 10kg/袋" />
+                </el-form-item>
+                <el-form-item label="数量" required>
+                    <el-input-number v-model="donationDialog.form.quantity" :min="1" style="width:100%" />
+                </el-form-item>
+            </template>
+            <el-form-item label="备注">
+                <el-input v-model="donationDialog.form.remark" type="textarea" :rows="2" />
+            </el-form-item>
+        </el-form>
+        <template #footer>
+            <el-button @click="donationDialog.visible = false">取消</el-button>
+            <el-button type="primary" :loading="saving" @click="submitDonation">登记</el-button>
+        </template>
+    </el-dialog>
+
+    <!-- ==================== 弹窗：志愿者/排班 ==================== -->
+    <el-dialog v-model="volunteerDialog.visible" title="登记志愿者" width="460px" destroy-on-close>
+        <el-form :model="volunteerDialog.form" label-width="80px">
+            <el-form-item label="姓名" required><el-input v-model="volunteerDialog.form.name" /></el-form-item>
+            <el-form-item label="手机号" required><el-input v-model="volunteerDialog.form.phone" /></el-form-item>
+            <el-form-item label="性别">
+                <el-radio-group v-model="volunteerDialog.form.gender">
+                    <el-radio value="M">男</el-radio>
+                    <el-radio value="F">女</el-radio>
+                </el-radio-group>
+            </el-form-item>
+            <el-form-item label="技能"><el-input v-model="volunteerDialog.form.skills" placeholder="如：摄影,驾驶" /></el-form-item>
+        </el-form>
+        <template #footer>
+            <el-button @click="volunteerDialog.visible = false">取消</el-button>
+            <el-button type="primary" :loading="saving" @click="submitVolunteer">保存</el-button>
+        </template>
+    </el-dialog>
+
+    <el-dialog v-model="shiftDialog.visible" title="新增排班" width="480px" destroy-on-close>
+        <el-form :model="shiftDialog.form" label-width="90px">
+            <el-form-item label="志愿者" required>
+                <select v-model="shiftDialog.form.volunteerId" class="native-select">
+                    <option :value="null" disabled>选择志愿者</option>
+                    <option v-for="v in volunteers" :key="v.id" :value="v.id">{{ v.name }}</option>
+                </select>
+            </el-form-item>
+            <el-form-item label="日期" required>
+                <el-date-picker v-model="shiftDialog.form.shiftDate" type="date"
+                                value-format="YYYY-MM-DD" style="width:100%" />
+            </el-form-item>
+            <el-form-item label="开始时间" required>
+                <el-time-picker v-model="shiftDialog.form.startTime" format="HH:mm"
+                                value-format="HH:mm" style="width:100%" />
+            </el-form-item>
+            <el-form-item label="结束时间" required>
+                <el-time-picker v-model="shiftDialog.form.endTime" format="HH:mm"
+                                value-format="HH:mm" style="width:100%" />
+            </el-form-item>
+            <el-form-item label="工作内容">
+                <select v-model="shiftDialog.form.workType" class="native-select">
+                    <option value="FEED">投喂</option>
+                    <option value="CLEAN">清洁</option>
+                    <option value="ESCORT">陪护</option>
+                    <option value="MEDICAL">医疗协助</option>
+                    <option value="EVENT">活动</option>
+                </select>
+            </el-form-item>
+        </el-form>
+        <template #footer>
+            <el-button @click="shiftDialog.visible = false">取消</el-button>
+            <el-button type="primary" :loading="saving" @click="submitShift">保存</el-button>
+        </template>
+    </el-dialog>
+
+    <!-- ============ 我的资料 ============ -->
+    <el-dialog v-model="profileVisible" title="我的资料" width="560px" destroy-on-close>
+        <div class="profile-account">
+            <div class="avatar">{{ (user.realName || user.username).charAt(0) }}</div>
+            <div>
+                <b>{{ user.realName || user.username }}</b>
+                <span>{{ user.username }} · {{ roleText }}</span>
+            </div>
+        </div>
+
+        <h4 class="profile-h">基本信息</h4>
+        <el-form :model="profileForm" label-width="90px">
+            <el-row :gutter="12">
+                <el-col :span="12">
+                    <el-form-item label="姓名" required>
+                        <el-input v-model="profileForm.realName" placeholder="真实姓名" />
+                    </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                    <el-form-item label="手机号">
+                        <el-input v-model="profileForm.phone" placeholder="11 位手机号，可留空" />
+                    </el-form-item>
+                </el-col>
+                <el-col :span="24">
+                    <el-form-item label="邮箱">
+                        <el-input v-model="profileForm.email" placeholder="选填" />
+                    </el-form-item>
+                </el-col>
+            </el-row>
+            <div class="profile-tip">账号与角色由管理员维护，如需变更请联系管理员。</div>
+            <div style="display:flex;justify-content:flex-end">
+                <el-button type="primary" :loading="profileSaving" @click="saveProfile">保存资料</el-button>
+            </div>
+        </el-form>
+
+        <div class="profile-sep"></div>
+
+        <h4 class="profile-h">修改密码</h4>
+        <el-form :model="pwdForm" label-width="90px">
+            <el-form-item label="原密码">
+                <el-input v-model="pwdForm.oldPassword" type="password" show-password />
+            </el-form-item>
+            <el-row :gutter="12">
+                <el-col :span="12">
+                    <el-form-item label="新密码">
+                        <el-input v-model="pwdForm.newPassword" type="password" show-password placeholder="至少 6 位" />
+                    </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                    <el-form-item label="确认新密码">
+                        <el-input v-model="pwdForm.confirm" type="password" show-password />
+                    </el-form-item>
+                </el-col>
+            </el-row>
+            <div class="profile-tip">修改成功后会自动退出，需要用新密码重新登录。</div>
+            <div style="display:flex;justify-content:flex-end">
+                <el-button :loading="profileSaving" @click="changePassword">修改密码</el-button>
+            </div>
+        </el-form>
+
+        <template #footer>
+            <el-button @click="profileVisible = false">关闭</el-button>
+        </template>
+    </el-dialog>
+</div>
+
+<script>
+    const { createApp } = Vue;
+    const ElMessage = ElementPlus.ElMessage;
+    const ElMessageBox = ElementPlus.ElMessageBox;
+
+    /* ============================================================
+       统一请求封装
+       1. 自动携带 JWT
+       2. 401 自动跳回登录页
+       3. 业务错误统一弹提示，页面代码只关心成功分支
+       ============================================================ */
+    const http = axios.create({ baseURL: '/api', timeout: 15000 });
+
+    http.interceptors.request.use(cfg => {
+        const token = localStorage.getItem('pawhome_token');
+        if (token) cfg.headers.Authorization = 'Bearer ' + token;
+        return cfg;
+    });
+
+    http.interceptors.response.use(
+        res => {
+            const body = res.data;
+            if (body.code === 200) return body.data;
+            if (body.code === 401) {
+                localStorage.removeItem('pawhome_token');
+                localStorage.removeItem('pawhome_user');
+                ElMessage.warning('登录已失效，请重新登录');
+                setTimeout(() => location.reload(), 800);
+                return Promise.reject(body);
+            }
+            ElMessage.error(body.message || '请求失败');
+            return Promise.reject(body);
+        },
+        err => {
+            const msg = err.response ? `请求失败（${err.response.status}）` : '网络异常，请检查网关是否启动';
+            ElMessage.error(msg);
+            return Promise.reject(err);
+        }
+    );
+
+    createApp({
+        data() {
+            return {
+                user: JSON.parse(localStorage.getItem('pawhome_user') || 'null'),
+                loading: false,
+                saving: false,
+                uploading: false,
+                pageLoading: false,
+                page: 'dashboard',
+                unread: 0,
+
+                // ---- 我的资料（管理员 / 员工 / 志愿者都能改自己的）----
+                profileVisible: false,
+                profileSaving: false,
+                profileForm: { realName: '', phone: '', email: '' },
+                pwdForm: { oldPassword: '', newPassword: '', confirm: '' },
+
+                loginForm: { username: 'admin', password: '123456' },
+
+                // roles 决定谁能看到这个菜单，后端网关还有一层同规则的校验
+                allMenus: [
+                    { key: 'dashboard', label: '数据看板', icon: '📊', desc: '各服务汇总的关键指标', roles: ['ADMIN', 'STAFF'] },
+                    { key: 'animal',    label: '动物档案', icon: '🐾', desc: 'animal 服务 · 建档与健康管理', roles: ['ADMIN', 'STAFF'] },
+                    { key: 'adoption',  label: '领养审核', icon: '📝', desc: 'adoption 服务 · 申请与审核', roles: ['ADMIN', 'STAFF'] },
+                    { key: 'supply',    label: '物资库存', icon: '📦', desc: 'supply 服务 · 台账与出入库', roles: ['ADMIN', 'STAFF'] },
+                    { key: 'donation',  label: '爱心捐赠', icon: '💝', desc: 'donation 服务 · 捐赠与入库', roles: ['ADMIN', 'STAFF'] },
+                    { key: 'volunteer', label: '志愿服务', icon: '🤝', desc: 'volunteer 服务 · 排班与打卡', roles: ['ADMIN', 'STAFF', 'VOLUNTEER'] },
+                    { key: 'notify',    label: '消息中心', icon: '🔔', desc: 'notify 服务 · 站内信', roles: ['ADMIN', 'STAFF', 'VOLUNTEER'] },
+                    { key: 'user',      label: '用户管理', icon: '👤', desc: 'auth 服务 · 账号与角色权限', roles: ['ADMIN'] }
+                ],
+
+                // ---- 看板 ----
+                animalStat: {}, adoptionStat: {}, supplyStat: {}, donationStat: {}, volunteerStat: {},
+                adoptableList: [], recentApplies: [],
+
+                // ---- 动物 ----
+                animalList: [], animalTotal: 0,
+                animalQuery: { pageNum: 1, pageSize: 10, keyword: '', species: '', adoptStatus: '' },
+                animalDialog: { visible: false, form: this.emptyAnimal() },
+                medicalDialog: { visible: false, animalId: null, animalName: '', list: [] },
+                medicalForm: { visible: false, form: {} },
+
+                // ---- 领养 ----
+                applies: [], adoptionTotal: 0,
+                adoptionQuery: { pageNum: 1, pageSize: 10, keyword: '', status: '' },
+                applyDialog: { visible: false, form: this.emptyApply() },
+                auditDialog: { visible: false, row: {}, pass: true, remark: '' },
+                visitDialog: { visible: false, applyId: null, animalName: '', applicantName: '', list: [] },
+                visitFormDialog: { visible: false, form: {} },
+
+                // ---- 物资 ----
+                supplies: [], supplyTotal: 0, warningItems: [], allSupplies: [],
+                supplyQuery: { pageNum: 1, keyword: '', onlyWarning: false },
+                stockDialog: { visible: false, direction: 'IN', form: { itemId: null, quantity: 1, remark: '' } },
+                itemDialog: { visible: false, form: this.emptyItem() },
+                categories: [
+                    { id: 1, name: '主粮' }, { id: 2, name: '零食' }, { id: 3, name: '医疗用品' },
+                    { id: 4, name: '清洁用品' }, { id: 5, name: '日用器具' }
+                ],
+                records: [], recordTotal: 0,
+                recordQuery: { itemId: null, pageNum: 1 },
+
+                // ---- 捐赠 ----
+                donations: [], donationTotal: 0,
+                donationQuery: { pageNum: 1, keyword: '', type: '' },
+                donationDialog: { visible: false, form: this.emptyDonation() },
+
+                // ---- 志愿 ----
+                volunteers: [], shifts: [], checkins: [], checkinFilter: null,
+                volunteerDialog: { visible: false, form: { name: '', phone: '', gender: 'M', skills: '' } },
+                shiftDialog: { visible: false, form: { volunteerId: null, shiftDate: '', startTime: '', endTime: '', workType: 'FEED' } },
+
+                // ---- 消息 ----
+                messages: [], notifyFilter: null,
+
+                // ---- 用户 ----
+                users: [], userTotal: 0, userStat: {},
+                userQuery: { pageNum: 1, pageSize: 10, keyword: '', role: '' }
+            };
+        },
+
+        computed: {
+            menus() {
+                const role = this.user && this.user.role;
+                return this.allMenus.filter(m => m.roles.includes(role));
+            },
+            currentMenu() {
+                return this.menus.find(m => m.key === this.page) || this.menus[0] || { label: '', desc: '' };
+            },
+            roleText() {
+                const map = { ADMIN: '管理员', STAFF: '救助站员工', VOLUNTEER: '志愿者', ADOPTER: '领养人' };
+                return map[this.user?.role] || this.user?.role || '';
+            }
+        },
+
+        mounted() {
+            // 领养人没有后台权限，直接送回门户（后台菜单里也不会有任何一项）
+            if (this.user && this.user.role === 'ADOPTER') {
+                location.href = '/index.html';
+                return;
+            }
+            if (this.user) {
+                this.bootstrap();
+            }
+        },
+
+        methods: {
+            /* ==================== 空表单 ==================== */
+            emptyAnimal() {
+                return {
+                    id: null, name: '', species: 'DOG', breed: '', gender: 'M', ageMonth: 12,
+                    weight: null, healthStatus: 'HEALTHY', rescueDate: null, rescueCity: '',
+                    rescueSource: '', description: '', coverImage: '',
+                    sterilized: 0, vaccinated: 1, dewormed: 1
+                };
+            },
+            emptyApply() {
+                return {
+                    animalId: null, applicantName: '', phone: '', city: '杭州', address: '',
+                    occupation: '', familyMember: 1, hasPetExperience: 0, hasStableIncome: 1, reason: ''
+                };
+            },
+            emptyDonation() {
+                return {
+                    type: 'MONEY', donorName: '', donorPhone: '', amount: 100,
+                    supplyItemId: null, itemDesc: '', quantity: 1, remark: ''
+                };
+            },
+            emptyItem() {
+                return {
+                    id: null, name: '', categoryId: 1, categoryName: '主粮',
+                    unit: '件', spec: '', stock: 0, warnStock: 10, price: 0
+                };
+            },
+
+            /* ==================== 登录 ==================== */
+            async doLogin() {
+                if (!this.loginForm.username || !this.loginForm.password) {
+                    ElMessage.warning('请输入账号和密码');
+                    return;
+                }
+                this.loading = true;
+                try {
+                    const data = await http.post('/auth/login', this.loginForm);
+                    localStorage.setItem('pawhome_token', data.token);
+                    localStorage.setItem('pawhome_user', JSON.stringify(data.user));
+                    // 领养人走独立的 C 端门户，这里只保留管理侧三种角色
+                    if (data.user.role === 'ADOPTER') {
+                        ElMessage.success('领养人账号，正在跳转领养门户…');
+                        setTimeout(() => { location.href = '/index.html'; }, 700);
+                        return;
+                    }
+                    this.user = data.user;
+                    ElMessage.success('欢迎回来，' + (data.user.realName || data.user.username));
+                    this.bootstrap();
+                } catch (e) {
+                    // 错误提示已由拦截器统一处理
+                } finally {
+                    this.loading = false;
+                }
+            },
+
+            /* ==================== 我的资料 ==================== */
+            openProfile() {
+                if (!this.user) return;
+                this.profileForm = {
+                    realName: this.user.realName || '',
+                    phone: this.user.phone || '',
+                    email: this.user.email || ''
+                };
+                this.pwdForm = { oldPassword: '', newPassword: '', confirm: '' };
+                this.profileVisible = true;
+                // 顺手从服务端拉一次最新资料，避免本地缓存过期
+                http.get('/auth/me').then(me => {
+                    if (!me) return;
+                    this.user = Object.assign({}, this.user, me);
+                    localStorage.setItem('pawhome_user', JSON.stringify(this.user));
+                    this.profileForm = {
+                        realName: me.realName || '',
+                        phone: me.phone || '',
+                        email: me.email || ''
+                    };
+                }).catch(() => {});
+            },
+
+            async saveProfile() {
+                const f = this.profileForm;
+                if (!f.realName || !f.realName.trim()) {
+                    ElMessage.warning('姓名不能为空');
+                    return;
+                }
+                if (f.phone && !/^1[3-9]\d{9}$/.test(f.phone)) {
+                    ElMessage.warning('手机号请填写 11 位数字，或留空');
+                    return;
+                }
+                this.profileSaving = true;
+                try {
+                    const vo = await http.put('/auth/profile', {
+                        realName: f.realName.trim(),
+                        phone: f.phone || '',
+                        email: f.email || ''
+                    });
+                    this.user = Object.assign({}, this.user, vo);
+                    localStorage.setItem('pawhome_user', JSON.stringify(this.user));
+                    ElMessage.success('资料已更新');
+                } catch (e) {
+                    // 拦截器已提示具体原因
+                } finally {
+                    this.profileSaving = false;
+                }
+            },
+
+            async changePassword() {
+                const f = this.pwdForm;
+                if (!f.oldPassword || !f.newPassword) {
+                    ElMessage.warning('请填写原密码和新密码');
+                    return;
+                }
+                if (f.newPassword.length < 6) {
+                    ElMessage.warning('新密码至少 6 位');
+                    return;
+                }
+                if (f.newPassword !== f.confirm) {
+                    ElMessage.warning('两次输入的新密码不一致');
+                    return;
+                }
+                this.profileSaving = true;
+                try {
+                    await http.put('/auth/profile/password', {
+                        oldPassword: f.oldPassword,
+                        newPassword: f.newPassword
+                    });
+                    ElMessage.success('密码已修改，请用新密码重新登录');
+                    setTimeout(() => {
+                        localStorage.removeItem('pawhome_token');
+                        localStorage.removeItem('pawhome_user');
+                        location.reload();
+                    }, 1200);
+                } catch (e) {
+                    // 拦截器已提示具体原因
+                } finally {
+                    this.profileSaving = false;
+                }
+            },
+
+            doLogout() {
+                ElMessageBox.confirm('确定要退出登录吗？', '提示', { type: 'warning' })
+                    .then(() => {
+                        localStorage.removeItem('pawhome_token');
+                        localStorage.removeItem('pawhome_user');
+                        location.reload();
+                    }).catch(() => {});
+            },
+
+            /* ==================== 初始化 ==================== */
+            async bootstrap() {
+                // 只加载当前角色能进的页面，避免志愿者一登录就先吃一堆 403
+                this.page = (this.menus[0] || { key: '' }).key;
+                await this.loadUnread();
+                if (this.canSee('animal') || this.canSee('supply') || this.canSee('adoption')) {
+                    await this.loadLookups();
+                }
+                this.switchPage(this.page);
+            },
+
+            canSee(key) {
+                return this.menus.some(m => m.key === key);
+            },
+
+            async loadLookups() {
+                try {
+                    const [animals, supplies] = await Promise.all([
+                        http.get('/animal/animals', { params: { pageNum: 1, pageSize: 100, adoptStatus: 'WAITING' } }),
+                        http.get('/supply/items', { params: { pageNum: 1, pageSize: 100 } })
+                    ]);
+                    this.adoptableList = animals.records || [];
+                    this.supplies = supplies.records || [];
+                    this.allSupplies = supplies.records || [];
+                } catch (e) { /* 忽略 */ }
+            },
+
+            switchPage(key) {
+                if (!this.canSee(key)) {
+                    ElMessage.warning('当前角色没有这个页面的权限');
+                    return;
+                }
+                this.page = key;
+                const loaders = {
+                    dashboard: () => this.loadDashboard(),
+                    animal: () => this.loadAnimals(),
+                    adoption: () => this.loadApplies(),
+                    supply: () => { this.loadSupplies(); this.loadRecords(); },
+                    donation: () => this.loadDonations(),
+                    volunteer: () => this.loadVolunteers(),
+                    notify: () => this.loadMessages(),
+                    user: () => this.loadUsers()
+                };
+                loaders[key] && loaders[key]();
+            },
+
+            /* ==================== 看板 ==================== */
+            async loadDashboard() {
+                this.pageLoading = true;
+                try {
+                    const [a, ad, sp, dn, vo, list, applies] = await Promise.allSettled([
+                        http.get('/animal/statistics'),
+                        http.get('/adoption/statistics'),
+                        http.get('/supply/statistics'),
+                        http.get('/donation/statistics'),
+                        http.get('/volunteer/statistics'),
+                        http.get('/animal/public/waiting', { params: { limit: 5 } }),
+                        http.get('/adoption/applies', { params: { pageNum: 1, pageSize: 5 } })
+                    ]);
+                    if (a.status === 'fulfilled') this.animalStat = a.value || {};
+                    if (ad.status === 'fulfilled') this.adoptionStat = ad.value || {};
+                    if (sp.status === 'fulfilled') this.supplyStat = sp.value || {};
+                    if (dn.status === 'fulfilled') this.donationStat = dn.value || {};
+                    if (vo.status === 'fulfilled') this.volunteerStat = vo.value || {};
+                    if (list.status === 'fulfilled') this.adoptableList = list.value || [];
+                    if (applies.status === 'fulfilled') this.recentApplies = (applies.value.records || []);
+                } finally {
+                    this.pageLoading = false;
+                    this.renderCharts();
+                }
+            },
+
+            /* ==================== 动物 ==================== */
+            async loadAnimals() {
+                this.pageLoading = true;
+                try {
+                    const data = await http.get('/animal/animals', { params: this.animalQuery });
+                    this.animalList = data.records || [];
+                    this.animalTotal = data.total || 0;
+                } finally { this.pageLoading = false; }
+            },
+            onAnimalPageChange(p) {
+                this.animalQuery.pageNum = p;
+                this.loadAnimals();
+            },
+            resetAnimalQuery() {
+                this.animalQuery = { pageNum: 1, pageSize: 10, keyword: '', species: '', adoptStatus: '' };
+                this.loadAnimals();
+            },
+            openAnimalDialog(row) {
+                this.animalDialog.form = row ? { ...this.emptyAnimal(), ...row } : this.emptyAnimal();
+                this.animalDialog.visible = true;
+            },
+            /* ---------- 封面图上传 ---------- */
+            pickCover() {
+                if (this.uploading) return;
+                if (this.$refs.coverInput) this.$refs.coverInput.click();
+            },
+            async onCoverPick(e) {
+                const input = e.target;
+                const file = input.files && input.files[0];
+                if (!file) return;
+                if (!['image/png', 'image/jpeg', 'image/gif'].includes(file.type)) {
+                    ElMessage.warning('只支持 jpg / png / gif 格式的图片');
+                    input.value = '';
+                    return;
+                }
+                if (file.size > 5 * 1024 * 1024) {
+                    ElMessage.warning('图片不能超过 5MB');
+                    input.value = '';
+                    return;
+                }
+                const form = new FormData();
+                form.append('file', file);
+                this.uploading = true;
+                try {
+                    const url = await http.post('/animal/upload', form);
+                    this.animalDialog.form.coverImage = url;
+                    ElMessage.success('图片已上传');
+                } catch (err) {
+                    // 拦截器已给出具体原因
+                } finally {
+                    this.uploading = false;
+                    input.value = '';
+                }
+            },
+
+            async saveAnimal() {
+                const f = this.animalDialog.form;
+                if (!f.name || !f.species || f.ageMonth === null) {
+                    ElMessage.warning('请填写昵称、物种和月龄');
+                    return;
+                }
+                // 没填封面图时按物种给一张默认图，避免门户卡片显示破图
+                if (!f.coverImage) {
+                    f.coverImage = f.species === 'CAT'
+                        ? '/images/animals/1002.jpg'
+                        : '/images/animals/1001.jpg';
+                }
+                this.saving = true;
+                try {
+                    if (f.id) {
+                        await http.put('/animal/animals', f);
+                        ElMessage.success('修改成功');
+                    } else {
+                        await http.post('/animal/animals', f);
+                        ElMessage.success('建档成功');
+                    }
+                    this.animalDialog.visible = false;
+                    this.loadAnimals();
+                } finally { this.saving = false; }
+            },
+            removeAnimal(row) {
+                ElMessageBox.confirm(`确定删除「${row.name}」的档案吗？`, '删除确认', { type: 'warning' })
+                    .then(async () => {
+                        await http.delete('/animal/animals/' + row.id);
+                        ElMessage.success('已删除');
+                        this.loadAnimals();
+                    }).catch(() => {});
+            },
+            async showMedical(row) {
+                this.medicalDialog.animalId = row.id;
+                this.medicalDialog.animalName = row.name;
+                this.medicalDialog.list = await http.get(`/animal/animals/${row.id}/medical`);
+                this.medicalDialog.visible = true;
+            },
+            openMedicalForm() {
+                this.medicalForm.form = {
+                    animalId: this.medicalDialog.animalId,
+                    recordType: 'VACCINE',
+                    title: '',
+                    vetName: '',
+                    cost: 0,
+                    recordDate: new Date().toISOString().slice(0, 10),
+                    remark: ''
+                };
+                this.medicalForm.visible = true;
+            },
+            async saveMedical() {
+                const f = this.medicalForm.form;
+                if (!f.recordDate || !f.title) {
+                    ElMessage.warning('请填写日期和记录标题');
+                    return;
+                }
+                try {
+                    await http.post('/animal/medical', f);
+                    ElMessage.success('诊疗记录已保存');
+                    this.medicalForm.visible = false;
+                    this.medicalDialog.list = await http.get(`/animal/animals/${f.animalId}/medical`);
+                } catch (e) {
+                    // 错误提示已统一处理
+                }
+            },
+
+            /* ==================== 领养 ==================== */
+            async loadApplies() {
+                this.pageLoading = true;
+                try {
+                    const data = await http.get('/adoption/applies', { params: this.adoptionQuery });
+                    this.applies = data.records || [];
+                    this.adoptionTotal = data.total || 0;
+                } finally { this.pageLoading = false; }
+            },
+            openApplyDialog() {
+                this.applyDialog.form = { ...this.emptyApply() };
+                this.applyDialog.visible = true;
+                this.loadLookups();
+            },
+            async submitApply() {
+                const f = this.applyDialog.form;
+                if (!f.animalId || !f.applicantName || !f.phone || !f.address || !f.reason) {
+                    ElMessage.warning('请完整填写必填项');
+                    return;
+                }
+                this.saving = true;
+                try {
+                    await http.post('/adoption/apply', f);
+                    ElMessage.success('申请已提交，动物状态已变为「申请中」');
+                    this.applyDialog.visible = false;
+                    this.loadApplies();
+                    this.loadLookups();
+                } finally { this.saving = false; }
+            },
+            openAuditDialog(row) {
+                this.auditDialog = { visible: true, row, pass: true, remark: '' };
+            },
+            async submitAudit() {
+                if (!this.auditDialog.pass && !this.auditDialog.remark) {
+                    ElMessage.warning('驳回时必须填写审核意见');
+                    return;
+                }
+                this.saving = true;
+                try {
+                    await http.post('/adoption/audit', {
+                        applyId: this.auditDialog.row.id,
+                        pass: this.auditDialog.pass,
+                        remark: this.auditDialog.remark
+                    });
+                    ElMessage.success(this.auditDialog.pass ? '已通过，动物已标记为已领养' : '已驳回');
+                    this.auditDialog.visible = false;
+                    this.loadApplies();
+                    this.loadLookups();
+                } finally { this.saving = false; }
+            },
+
+            /* ---------- 回访 ---------- */
+            async openVisitDialog(row) {
+                this.visitDialog = {
+                    visible: true, applyId: row.id,
+                    animalName: row.animalName, applicantName: row.applicantName,
+                    list: []
+                };
+                this.loadVisits();
+            },
+            async loadVisits() {
+                try {
+                    const list = await http.get(`/adoption/visits/${this.visitDialog.applyId}`);
+                    this.visitDialog.list = Array.isArray(list) ? list : [];
+                } catch (e) {
+                    this.visitDialog.list = [];
+                }
+            },
+            openVisitForm() {
+                this.visitFormDialog.form = {
+                    applyId: this.visitDialog.applyId,
+                    visitDate: new Date().toISOString().slice(0, 10),
+                    visitor: this.user.realName || this.user.username,
+                    animalHealth: 'GOOD', livingEnv: 'NORMAL', result: 'PASS', remark: ''
+                };
+                this.visitFormDialog.visible = true;
+            },
+            async submitVisit() {
+                const f = this.visitFormDialog.form;
+                if (!f.visitDate) {
+                    ElMessage.warning('请选择回访日期');
+                    return;
+                }
+                this.saving = true;
+                try {
+                    await http.post('/adoption/visits', f);
+                    ElMessage.success('回访记录已保存');
+                    this.visitFormDialog.visible = false;
+                    this.loadVisits();
+                } finally { this.saving = false; }
+            },
+
+            /* ==================== 物资 ==================== */
+            async loadSupplies() {
+                this.pageLoading = true;
+                try {
+                    const data = await http.get('/supply/items', {
+                        params: {
+                            pageNum: this.supplyQuery.pageNum,
+                            pageSize: 10,
+                            keyword: this.supplyQuery.keyword || undefined,
+                            onlyWarning: this.supplyQuery.onlyWarning || undefined
+                        }
+                    });
+                    this.supplies = data.records || [];
+                    this.supplyTotal = data.total || 0;
+                    this.warningItems = (data.records || []).filter(s => s.warning);
+                } finally { this.pageLoading = false; }
+            },
+            openStockDialog(direction, row) {
+                this.stockDialog = {
+                    visible: true,
+                    direction,
+                    form: { itemId: row ? row.id : null, quantity: 1, remark: '' }
+                };
+            },
+            async submitStock() {
+                const f = this.stockDialog.form;
+                if (!f.itemId || !f.quantity) {
+                    ElMessage.warning('请选择物资并填写数量');
+                    return;
+                }
+                this.saving = true;
+                try {
+                    const url = this.stockDialog.direction === 'IN' ? '/supply/inbound' : '/supply/outbound';
+                    await http.post(url, {
+                        itemId: f.itemId,
+                        quantity: f.quantity,
+                        sourceType: this.stockDialog.direction === 'IN' ? 'PURCHASE' : 'ISSUE',
+                        remark: f.remark
+                    });
+                    ElMessage.success(this.stockDialog.direction === 'IN' ? '入库成功' : '出库成功');
+                    this.stockDialog.visible = false;
+                    this.loadSupplies();
+                    this.loadRecords();
+                } finally { this.saving = false; }
+            },
+
+            /* ---------- 物资档案（新增 / 修改） ---------- */
+            openItemDialog(row) {
+                this.itemDialog.form = row
+                    ? {
+                        id: row.id, name: row.name, categoryId: row.categoryId,
+                        categoryName: row.categoryName, unit: row.unit, spec: row.spec,
+                        stock: row.stock, warnStock: row.warnStock, price: row.price || 0
+                    }
+                    : this.emptyItem();
+                this.itemDialog.visible = true;
+            },
+            onCategoryChange() {
+                const c = this.categories.find(x => x.id === this.itemDialog.form.categoryId);
+                this.itemDialog.form.categoryName = c ? c.name : '';
+            },
+            async submitItem() {
+                const f = this.itemDialog.form;
+                if (!f.name || !f.name.trim()) {
+                    ElMessage.warning('请填写物资名称');
+                    return;
+                }
+                this.saving = true;
+                try {
+                    if (f.id) {
+                        // 修改时不带 stock：库存只能通过出入库变更，否则台账与流水会打架
+                        await http.put('/supply/items', {
+                            id: f.id, name: f.name, categoryId: f.categoryId,
+                            categoryName: f.categoryName, unit: f.unit, spec: f.spec,
+                            warnStock: f.warnStock, price: f.price
+                        });
+                        ElMessage.success('修改成功');
+                    } else {
+                        await http.post('/supply/items', f);
+                        ElMessage.success('新增成功');
+                    }
+                    this.itemDialog.visible = false;
+                    this.loadSupplies();
+                    this.loadRecords();
+                    this.loadLookups();
+                } finally { this.saving = false; }
+            },
+
+            /* ---------- 出入库流水 ---------- */
+            async loadRecords() {
+                try {
+                    const data = await http.get('/supply/records', {
+                        params: {
+                            itemId: this.recordQuery.itemId || undefined,
+                            pageNum: this.recordQuery.pageNum,
+                            pageSize: 8
+                        }
+                    });
+                    this.records = data.records || [];
+                    this.recordTotal = data.total || 0;
+                } catch (e) {
+                    this.records = [];
+                }
+            },
+            recordSourceText(s) {
+                return {
+                    DONATION: '捐赠入库', PURCHASE: '采购入库', ISSUE: '领用出库',
+                    SCRAP: '报损出库', MANUAL: '手工调整'
+                }[s] || s || '—';
+            },
+
+            /* ==================== 捐赠 ==================== */
+            async loadDonations() {
+                this.pageLoading = true;
+                try {
+                    const data = await http.get('/donation/list', {
+                        params: {
+                            pageNum: this.donationQuery.pageNum,
+                            pageSize: 10,
+                            keyword: this.donationQuery.keyword || undefined,
+                            type: this.donationQuery.type || undefined
+                        }
+                    });
+                    this.donations = data.records || [];
+                    this.donationTotal = data.total || 0;
+                } finally { this.pageLoading = false; }
+            },
+            openDonationDialog() {
+                this.donationDialog.form = { ...this.emptyDonation() };
+                this.donationDialog.visible = true;
+                this.loadLookups();
+            },
+            async submitDonation() {
+                const f = this.donationDialog.form;
+                if (!f.donorName) { ElMessage.warning('请填写捐赠人'); return; }
+                if (f.type === 'MONEY' && !f.amount) { ElMessage.warning('请填写金额'); return; }
+                if (f.type === 'GOODS' && (!f.supplyItemId || !f.quantity)) {
+                    ElMessage.warning('请选择物资并填写数量'); return;
+                }
+                this.saving = true;
+                try {
+                    await http.post('/donation/create', f);
+                    ElMessage.success('登记成功，请在列表中点击「支付」完成流程');
+                    this.donationDialog.visible = false;
+                    this.loadDonations();
+                } finally { this.saving = false; }
+            },
+            async doPay(row) {
+                try {
+                    await ElMessageBox.confirm(
+                        row.type === 'GOODS'
+                            ? '支付后将自动调用物资服务入库，确定继续？'
+                            : '确认模拟支付该笔捐赠？',
+                        '支付确认', { type: 'info' }
+                    );
+                    const status = await http.post(`/donation/${row.donationNo}/pay`);
+                    if (status === 'STORED') {
+                        ElMessage.success('支付成功，物资已入库');
+                    } else if (status === 'FAILED') {
+                        ElMessage.warning('支付成功，但入库失败，系统将自动重试');
+                    } else {
+                        ElMessage.success('支付成功');
+                    }
+                    this.loadDonations();
+                    this.loadSupplies();
+                } catch (e) { /* 取消 */ }
+            },
+            async doCancelDonation(row) {
+                try {
+                    await ElMessageBox.confirm(
+                        `取消后捐赠单 ${row.donationNo} 作废，不能再支付，确定吗？`,
+                        '取消捐赠单', { type: 'warning' }
+                    );
+                } catch (e) { return; }
+                try {
+                    await http.post(`/donation/${row.donationNo}/cancel`);
+                    ElMessage.success('捐赠单已取消');
+                    this.loadDonations();
+                } catch (e) { /* 拦截器已提示 */ }
+            },
+
+            /* ==================== 志愿 ==================== */
+            async loadVolunteers() {
+                this.pageLoading = true;
+                try {
+                    const [v, s, stat] = await Promise.all([
+                        http.get('/volunteer/volunteers', { params: { pageNum: 1, pageSize: 50 } }),
+                        http.get('/volunteer/shifts', { params: { pageNum: 1, pageSize: 50 } }),
+                        http.get('/volunteer/statistics')
+                    ]);
+                    this.volunteers = v.records || [];
+                    this.shifts = s.records || [];
+                    this.volunteerStat = stat || {};
+                    this.loadCheckins();
+                } finally { this.pageLoading = false; }
+            },
+            async loadCheckins() {
+                try {
+                    const list = await http.get('/volunteer/checkins', {
+                        params: { volunteerId: this.checkinFilter || undefined }
+                    });
+                    this.checkins = Array.isArray(list) ? list : [];
+                } catch (e) {
+                    this.checkins = [];
+                }
+            },
+            volunteerName(id) {
+                const v = this.volunteers.find(x => String(x.id) === String(id));
+                return v ? v.name : '—';
+            },
+            openVolunteerDialog() {
+                this.volunteerDialog.form = { name: '', phone: '', gender: 'M', skills: '' };
+                this.volunteerDialog.visible = true;
+            },
+            async submitVolunteer() {
+                const f = this.volunteerDialog.form;
+                if (!f.name || !f.phone) { ElMessage.warning('请填写姓名和手机号'); return; }
+                this.saving = true;
+                try {
+                    await http.post('/volunteer/volunteers', f);
+                    ElMessage.success('登记成功');
+                    this.volunteerDialog.visible = false;
+                    this.loadVolunteers();
+                } finally { this.saving = false; }
+            },
+            openShiftDialog() {
+                this.shiftDialog.form = {
+                    volunteerId: null, shiftDate: new Date().toISOString().slice(0, 10),
+                    startTime: '09:00', endTime: '12:00', workType: 'FEED'
+                };
+                this.shiftDialog.visible = true;
+            },
+            async submitShift() {
+                const f = this.shiftDialog.form;
+                if (!f.volunteerId || !f.shiftDate || !f.startTime || !f.endTime) {
+                    ElMessage.warning('请填写完整的排班信息'); return;
+                }
+                this.saving = true;
+                try {
+                    await http.post('/volunteer/shifts', f);
+                    ElMessage.success('排班成功');
+                    this.shiftDialog.visible = false;
+                    this.loadVolunteers();
+                } finally { this.saving = false; }
+            },
+            async doCheckin(row) {
+                await http.post(`/volunteer/shifts/${row.id}/checkin`);
+                ElMessage.success('签到成功');
+                this.loadVolunteers();
+            },
+            async doCheckout(row) {
+                const msg = await http.post(`/volunteer/shifts/${row.id}/checkout`);
+                ElMessage.success(msg || '签退成功');
+                this.loadVolunteers();
+            },
+
+            /* ==================== 用户管理 ==================== */
+            async loadUsers() {
+                this.pageLoading = true;
+                try {
+                    const [page, all] = await Promise.all([
+                        http.get('/auth/users', {
+                            params: {
+                                pageNum: this.userQuery.pageNum,
+                                pageSize: this.userQuery.pageSize,
+                                keyword: this.userQuery.keyword || undefined,
+                                role: this.userQuery.role || undefined
+                            }
+                        }),
+                        http.get('/auth/users', { params: { pageNum: 1, pageSize: 200 } })
+                    ]);
+                    this.users = page.records || [];
+                    this.userTotal = page.total || 0;
+
+                    const list = all.records || [];
+                    const byRole = {};
+                    list.forEach(u => { byRole[u.role] = (byRole[u.role] || 0) + 1; });
+                    this.userStat = {
+                        total: list.length,
+                        admins: byRole.ADMIN || 0,
+                        adopters: byRole.ADOPTER || 0,
+                        disabled: list.filter(u => u.status === 0).length
+                    };
+                } finally { this.pageLoading = false; }
+            },
+            async toggleUserStatus(row) {
+                const next = row.status === 1 ? 0 : 1;
+                if (next === 0 && row.username === 'admin') {
+                    ElMessage.warning('内置管理员账号不能停用，否则没人能进后台了');
+                    return;
+                }
+                try {
+                    await ElMessageBox.confirm(
+                        next === 1
+                            ? `确定启用账号「${row.username}」吗？`
+                            : `停用后「${row.username}」将无法登录，历史数据保留，确定吗？`,
+                        '账号状态', { type: 'warning' }
+                    );
+                } catch (e) { return; }
+                try {
+                    await http.put(`/auth/users/${row.id}/status`, null, { params: { status: next } });
+                    ElMessage.success(next === 1 ? '已启用' : '已停用');
+                    this.loadUsers();
+                } catch (e) { /* 拦截器已提示 */ }
+            },
+            async resetUserPwd(row) {
+                try {
+                    await ElMessageBox.confirm(
+                        `确定把「${row.username}」的密码重置为默认密码吗？`,
+                        '重置密码', { type: 'warning' }
+                    );
+                } catch (e) { return; }
+                try {
+                    const pwd = await http.post(`/auth/users/${row.id}/reset-password`);
+                    ElMessageBox.alert(
+                        `账号 ${row.username} 的新密码是：${pwd}，请提醒本人尽快修改`,
+                        '密码已重置', { type: 'success' }
+                    );
+                } catch (e) { /* 拦截器已提示 */ }
+            },
+
+            /* ==================== 消息 ==================== */
+            async loadMessages() {
+                this.pageLoading = true;
+                try {
+                    const data = await http.get('/notify/messages', {
+                        params: { pageNum: 1, pageSize: 50, readFlag: this.notifyFilter }
+                    });
+                    this.messages = data.records || [];
+                } finally { this.pageLoading = false; }
+            },
+            async loadUnread() {
+                try {
+                    const data = await http.get('/notify/unread-count');
+                    this.unread = data.count || 0;
+                } catch (e) { this.unread = 0; }
+            },
+            async markRead(m) {
+                await http.put(`/notify/messages/${m.id}/read`);
+                m.readFlag = 1;
+                this.loadUnread();
+            },
+            async markAllRead() {
+                await http.put('/notify/messages/read-all');
+                ElMessage.success('已全部标为已读');
+                this.loadMessages();
+                this.loadUnread();
+            },
+
+            /* ==================== 展示辅助 ==================== */
+            statusTagType(s) {
+                return {
+                    WAITING: 'info', APPLYING: 'warning', ADOPTED: 'success', OBSERVING: 'warning',
+                    PENDING: 'warning', PASSED: 'success', REJECTED: 'danger', CANCELED: 'info', FINISHED: 'success',
+                    INIT: 'info', PAID: 'warning', STORED: 'success', FAILED: 'danger'
+                }[s] || 'info';
+            },
+            donationStatusText(s) {
+                return { INIT: '待支付', PAID: '已支付', STORED: '已入库', FAILED: '入库失败', CANCELED: '已取消' }[s] || s;
+            },
+            levelTagType(l) {
+                return { ROOKIE: 'info', ACTIVE: 'success', SENIOR: 'warning' }[l] || 'info';
+            },
+            levelText(l) {
+                return { ROOKIE: '新手', ACTIVE: '活跃', SENIOR: '资深' }[l] || l;
+            },
+            workTypeText(t) {
+                return { FEED: '投喂', CLEAN: '清洁', ESCORT: '陪护', MEDICAL: '医疗协助', EVENT: '活动' }[t] || t;
+            },
+            medicalTypeText(t) {
+                return { VACCINE: '疫苗', TREATMENT: '治疗', STERILIZE: '绝育', CHECK: '体检' }[t] || t;
+            },
+            msgIcon(t) {
+                return { ADOPTION: '📝', SUPPLY: '📦', DONATION: '💝', VOLUNTEER: '🤝', SYSTEM: '🔔' }[t] || '🔔';
+            },
+            roleLabel(r) {
+                return { ADMIN: '管理员', STAFF: '救助站员工', VOLUNTEER: '志愿者', ADOPTER: '领养人' }[r] || r;
+            },
+            rolePill(r) {
+                return { ADMIN: 'danger', STAFF: 'warning', VOLUNTEER: 'info', ADOPTER: 'success' }[r] || 'info';
+            },
+            healthText(v) {
+                return { GOOD: '良好', NORMAL: '一般', POOR: '较差' }[v] || v || '—';
+            },
+            visitResultText(r) {
+                return { PASS: '通过', WARN: '需关注', FAIL: '不合格' }[r] || r;
+            },
+            visitPill(r) {
+                return { PASS: 'success', WARN: 'warning', FAIL: 'danger' }[r] || 'info';
+            },
+
+            /* ==================== 看板图表 ==================== */
+            renderCharts() {
+                if (!window.echarts) return;
+                if (!this._chartResizeBound) {
+                    this._chartResizeBound = true;
+                    window.addEventListener('resize', () => {
+                        this._spChart && this._spChart.resize();
+                        this._stChart && this._stChart.resize();
+                    });
+                }
+                this.$nextTick(() => {
+                    const sp = this.animalStat.bySpecies || {};
+                    const cat = Number(sp.CAT || 0);
+                    const dog = Number(sp.DOG || 0);
+                    const total = Number(this.animalStat.total || 0);
+                    const waiting = Number(this.animalStat.waiting || 0);
+                    const adopted = Number(this.animalStat.adopted || 0);
+
+                    const spEl = this.$refs.speciesChart;
+                    if (spEl) {
+                        if (this._spChart) this._spChart.dispose();
+                        this._spChart = echarts.init(spEl);
+                        this._spChart.setOption({
+                            tooltip: { trigger: 'item', formatter: '{b}：{c} 只（{d}%）' },
+                            legend: {
+                                bottom: 4, icon: 'circle', itemWidth: 8, itemHeight: 8,
+                                textStyle: { fontSize: 12, color: '#5f646e' }
+                            },
+                            color: ['#378ADD', '#E8734A'],
+                            series: [{
+                                type: 'pie',
+                                radius: ['46%', '68%'],
+                                center: ['50%', '44%'],
+                                itemStyle: { borderColor: '#fff', borderWidth: 3 },
+                                label: { formatter: '{b}\n{c} 只', fontSize: 12, color: '#5f646e', lineHeight: 18 },
+                                labelLine: { length: 10, length2: 12 },
+                                data: [
+                                    { name: '猫咪', value: cat },
+                                    { name: '狗狗', value: dog }
+                                ]
+                            }]
+                        });
+                    }
+
+                    const stEl = this.$refs.statusChart;
+                    if (stEl) {
+                        if (this._stChart) this._stChart.dispose();
+                        this._stChart = echarts.init(stEl);
+                        this._stChart.setOption({
+                            tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+                            grid: { left: 42, right: 24, top: 26, bottom: 34 },
+                            xAxis: {
+                                type: 'category',
+                                data: ['在册', '待领养', '已领养'],
+                                axisTick: { show: false },
+                                axisLine: { lineStyle: { color: '#e5e7eb' } },
+                                axisLabel: { color: '#8b9099', fontSize: 12 }
+                            },
+                            yAxis: {
+                                type: 'value',
+                                minInterval: 1,
+                                splitLine: { lineStyle: { color: '#f2f4f7' } },
+                                axisLabel: { color: '#8b9099', fontSize: 12 }
+                            },
+                            series: [{
+                                type: 'bar',
+                                barWidth: 42,
+                                itemStyle: {
+                                    borderRadius: [8, 8, 0, 0],
+                                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                        { offset: 0, color: '#f5a179' },
+                                        { offset: 1, color: '#e8734a' }
+                                    ])
+                                },
+                                label: { show: true, position: 'top', fontSize: 12, color: '#5f646e' },
+                                data: [total, waiting, adopted]
+                            }]
+                        });
+                    }
+                });
+            }
+        }
+    }).use(ElementPlus).mount('#app');
+</script>
+</body>
+</html>

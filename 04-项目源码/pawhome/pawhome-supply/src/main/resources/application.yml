@@ -1,0 +1,119 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: pawhome-supply
+
+  # 配置中心：Nacos 上的 dataId 为 pawhome-supply.yaml
+  # optional: 前缀表示该配置不存在时也能正常启动，避免新人搭环境被卡住
+  config:
+    import:
+      - optional:nacos:pawhome-supply.yaml?group=DEFAULT_GROUP&refreshEnabled=true
+
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${MYSQL_HOST:127.0.0.1}:${MYSQL_PORT:3306}/pawhome_supply?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true
+    username: ${MYSQL_USERNAME:root}
+    password: ${MYSQL_PASSWORD:123456}
+    hikari:
+      minimum-idle: 3
+      maximum-pool-size: 10
+
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+      database: 4
+      timeout: 3000ms
+
+  cloud:
+    nacos:
+      discovery:
+        enabled: false   # registry -> Eureka, Nacos keeps config center only
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+        username: ${NACOS_USERNAME:nacos}
+        password: ${NACOS_PASSWORD:nacos}
+        namespace: ${NACOS_NAMESPACE:public}
+      config:
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+        username: ${NACOS_USERNAME:nacos}
+        password: ${NACOS_PASSWORD:nacos}
+        file-extension: yaml
+        refresh-enabled: true
+    sentinel:
+      transport:
+        dashboard: ${SENTINEL_DASHBOARD:127.0.0.1:8858}
+        port: 8722
+      eager: true
+
+# Redisson 会自动读取上面的 spring.data.redis.* 配置，
+# 无需额外写 redisson 配置文件（写了反而容易踩 YAML 转义问题）
+feign:
+  sentinel:
+    enabled: true
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    banner: false
+    db-config:
+      id-type: assign_id
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+
+# 这些值可以被 Nacos 上的 pawhome-supply.yaml 覆盖并动态刷新
+# 在 Nacos 控制台新建配置：
+#   dataId: pawhome-supply.yaml   group: DEFAULT_GROUP
+#   内容：pawhome.supply.default-warn-stock: 20
+# 发布后无需重启，@RefreshScope 会自动生效
+pawhome:
+  supply:
+    default-warn-stock: 10
+    notify-on-warn: true
+    max-change-quantity: 1000
+    lock-wait-seconds: 3
+    lock-lease-seconds: 10
+
+logging:
+  level:
+    com.pawhome: DEBUG
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %clr(%5p) %clr([%X{traceId:-no-trace}]){magenta} %clr(%-40.40logger{39}){cyan} : %m%n"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,refresh
+
+# ---------- Eureka client (textbook 11.4.2 / 11.5.3) ----------
+# Service registration runs on Eureka; Nacos keeps configuration only.
+# Spring Cloud allows one service-registry implementation per app,
+# so Nacos discovery is disabled above.
+eureka:
+  client:
+    service-url:
+      defaultZone: http://${EUREKA_HOST:localhost}:${EUREKA_PORT:8761}/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+    registry-fetch-interval-seconds: 5
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${server.port}
+    lease-renewal-interval-in-seconds: 10
+    lease-expiration-duration-in-seconds: 30

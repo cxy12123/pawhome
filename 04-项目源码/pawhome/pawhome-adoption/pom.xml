@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.pawhome</groupId>
+        <artifactId>pawhome</artifactId>
+        <version>1.0.0</version>
+    </parent>
+
+    <artifactId>pawhome-adoption</artifactId>
+    <name>pawhome-adoption</name>
+    <description>领养服务：申请、审核、回访，跨服务调用动物与通知服务</description>
+
+    <dependencies>
+        <!-- 教材 11.4.2：注册到 Eureka 服务中心（与 Nacos 双注册） -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.pawhome</groupId>
+            <artifactId>pawhome-common</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.pawhome</groupId>
+            <artifactId>pawhome-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>pawhome-adoption</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>
